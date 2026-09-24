@@ -35,6 +35,10 @@ export class BootScene extends Phaser.Scene {
         for (const key of h.voices[kind]) this.load.audio(key, `${P}${key}.mp3`);
       }
     }
+    this.load.json('elon-walk', `${P}elon-walk.json`);
+    this.load.once('filecomplete-json-elon-walk', (_key: string, _type: string, meta: FlySheetMeta) => {
+      this.load.spritesheet('elon-walk', `${P}elon-walk.png`, { frameWidth: meta.frameWidth, frameHeight: meta.frameHeight });
+    });
     this.load.image('mimic-1', `${P}mimic-1.png`);
     this.load.image('mimic-2', `${P}mimic-2.png`);
     this.load.image('mimic-3', `${P}mimic-3.png`);
@@ -74,6 +78,14 @@ export class BootScene extends Phaser.Scene {
         repeat: -1,
       });
     }
+
+    const elon = this.cache.json.get('elon-walk') as FlySheetMeta;
+    this.anims.create({
+      key: 'elon-walk',
+      frames: this.anims.generateFrameNumbers('elon-walk', { start: 0, end: elon.frames - 1 }),
+      frameRate: elon.fps,
+      repeat: -1,
+    });
 
     this.showGate();
   }
@@ -169,6 +181,31 @@ export class BootScene extends Phaser.Scene {
       edge.addColorStop(1, 'rgba(0,0,0,0)');
       c.fillStyle = edge;
       c.fillRect(0, 0, 64, 32);
+    });
+
+    // Elon's lobbed web ball.
+    this.canvas('web', 22, 22, (c) => {
+      c.beginPath();
+      c.arc(11, 11, 9, 0, Math.PI * 2);
+      c.fillStyle = '#e8ecf5';
+      c.fill();
+      c.strokeStyle = '#6a7390';
+      c.lineWidth = 1.2;
+      for (let i = 0; i < 4; i++) {
+        const a = (i * Math.PI) / 4;
+        c.beginPath();
+        c.moveTo(11 - Math.cos(a) * 9, 11 - Math.sin(a) * 9);
+        c.lineTo(11 + Math.cos(a) * 9, 11 + Math.sin(a) * 9);
+        c.stroke();
+      }
+      c.beginPath();
+      c.arc(11, 11, 5, 0, Math.PI * 2);
+      c.stroke();
+      c.lineWidth = 2;
+      c.strokeStyle = '#ff2e9a';
+      c.beginPath();
+      c.arc(11, 11, 9, 0, Math.PI * 2);
+      c.stroke();
     });
 
     this.glowBall('bullet', 20, '#ff2e9a', '#ffffff');

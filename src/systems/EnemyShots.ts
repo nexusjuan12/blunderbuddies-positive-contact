@@ -61,11 +61,22 @@ export class EnemyShots {
   ): void {
     const d = this.drumsticks.obtain();
     if (!d) return;
+    if (d.texture.key !== 'drumstick') d.setTexture('drumstick');
     d.launch(x, y, vx, vy, DRUMSTICK_RADIUS);
     d.gravity = gravity;
     d.lifetime = fuse;
     d.burstCount = burstCount;
     d.burstSpeed = burstSpeed;
+  }
+
+  /** A ballistic shot that lands on (tx, ty) after `time` seconds under `gravity`. Doesn't burst. */
+  lob(x: number, y: number, tx: number, ty: number, time: number, gravity: number, texture = 'web'): void {
+    const d = this.drumsticks.obtain();
+    if (!d) return;
+    if (d.texture.key !== texture) d.setTexture(texture);
+    d.launch(x, y, (tx - x) / time, (ty - y - 0.5 * gravity * time * time) / time, BULLET_RADIUS + 2);
+    d.gravity = gravity;
+    d.lifetime = Infinity;
   }
 
   update(dt: number): void {

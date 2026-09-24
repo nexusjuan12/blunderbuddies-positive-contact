@@ -16,8 +16,14 @@ const TELEGRAPH_TINT = 0xff5a5a;
 const Look = { Normal: 0, Flash: 1, Telegraph: 2 } as const;
 type Look = (typeof Look)[keyof typeof Look];
 
-/** A pooled mimic head. Behaviour is chosen by its data definition. */
-export class Enemy extends Phaser.GameObjects.Image implements Target {
+/** Walk-sheet metadata (tools/process_assets.py), all 0..1 of the frame. */
+interface WalkSheetMeta {
+  feetY: number;
+  hitbox: { x: number; y: number; w: number; h: number };
+}
+
+/** A pooled enemy: mimic heads and Elons. Behaviour is chosen by its data definition. */
+export class Enemy extends Phaser.GameObjects.Sprite implements Target {
   def: EnemyDef | null = null;
   hp = 0;
   radius = 0;
@@ -57,8 +63,20 @@ export class Enemy extends Phaser.GameObjects.Image implements Target {
     this.burstLeft = 0;
     this.vx = 0;
     this.vy = 0;
-    this.setTexture(def.texture);
+    this.setTexture(def.texture, 0);
     this.setScale(def.displayHeight / this.height);
+    if (def.behavior === 'ground') {
+      // Position is the hitbox centre; stand the feet on the ground line.
+      const meta = this.scene.cache.json.get(def.texture) as WalkSheetMeta;
+      const ox = meta.hitbox.x + meta.hitbox.w / 2;
+      const oy = meta.hitbox.y + meta.hitbox.h / 2;
+      this.setOrigin(ox, oy);
+      y = def.groundY - (meta.feetY - oy) * def.displayHeight;
+      this.play(def.anim);
+    } else {
+      this.anims.stop();
+      this.setOrigin(0.5);
+    }
     this.setPosition(x, y);
     this.rotation = 0;
     this.applyLook(Look.Normal, true);
@@ -135,6 +153,31 @@ export class Enemy extends Phaser.GameObjects.Image implements Target {
             ctx.shots.aimed(this.x - this.displayWidth * 0.2, this.y, ctx.heroX, ctx.heroY, def.bulletSpeed);
             this.burstLeft--;
             this.fireTimer = this.burstLeft > 0 ? def.burstGap : def.fireInterval;
+          }
+        }
+        break;
+
+      case 'ground':
+        this.stepTime += dt;
+        if (this.step === 0) {
+          this.x -= (def.groundScroll + def.walkSpeed) * dt;
+          if (this.stepTime >= def.walkTime && this.x < GAME_WIDTH - 30) {
+            this.step = 1;
+            this.stepTime = 0;
+            this.burstLeft = 1;
+            this.anims.pause();
+          }
+        } else {
+          // Stopped: carried along by the scrolling ground.
+          this.x -= def.groundScroll * dt;
+          if (this.burstLeft > 0 && this.stepTime >= def.pauseTime / 2) {
+            this.burstLeft = 0;
+            ctx.shots.lob(this.x, this.y - this.displayHeight * 0.2, ctx.heroX, ctx.heroY, def.lobTime, def.lobGravity);
+          }
+          if (this.stepTime >= def.pauseTime) {
+            this.step = 0;
+            this.stepTime = 0;
+            this.anims.resume();
           }
         }
         break;

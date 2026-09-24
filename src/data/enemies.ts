@@ -44,7 +44,27 @@ export interface TurretEnemyDef extends EnemyBase {
   firstShotDelay: number;
 }
 
-export type EnemyDef = SineEnemyDef | ChargerEnemyDef | TurretEnemyDef;
+/** Spiderlon's minions: walk along the ground, stop, and lob a shot that lands on the hero. */
+export interface GroundEnemyDef extends EnemyBase {
+  behavior: 'ground';
+  /** Walk animation key (created in BootScene from the sheet of the same name as `texture`). */
+  anim: string;
+  /** Feet line, px from the top of the screen. */
+  groundY: number;
+  /** The ground itself scrolls left at this speed (Happy Hills near layer). */
+  groundScroll: number;
+  /** Extra walking speed on top of the scroll. */
+  walkSpeed: number;
+  /** Seconds of walking between stops. */
+  walkTime: number;
+  /** Seconds stopped; the lob happens halfway through. */
+  pauseTime: number;
+  /** Seconds the lobbed shot takes to reach where the hero was. */
+  lobTime: number;
+  lobGravity: number;
+}
+
+export type EnemyDef = SineEnemyDef | ChargerEnemyDef | TurretEnemyDef | GroundEnemyDef;
 
 export const ENEMIES = {
   flyer: {
@@ -84,6 +104,22 @@ export const ENEMIES = {
     burstGap: 0.12,
     bulletSpeed: 210,
     firstShotDelay: 0.6,
+  },
+  elon: {
+    behavior: 'ground',
+    texture: 'elon-walk',
+    anim: 'elon-walk',
+    displayHeight: 96,
+    hp: 8,
+    radius: 22,
+    score: 200,
+    groundY: 508,
+    groundScroll: 110,
+    walkSpeed: 35,
+    walkTime: 1.6,
+    pauseTime: 0.8,
+    lobTime: 1.2,
+    lobGravity: 420,
   },
 } as const satisfies Record<string, EnemyDef>;
 
