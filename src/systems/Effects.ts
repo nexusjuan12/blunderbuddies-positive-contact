@@ -68,6 +68,11 @@ export class Effects {
     this.emit('ring', x, y, 0, 0, life, size * 0.2, size, tint, 0);
   }
 
+  /** A heart that floats up and fades (enemy bullets converted by the Positive Vibes Wave). */
+  floatHeart(x: number, y: number): void {
+    this.emit('heart', x, y, (Math.random() - 0.5) * 40, -70 - Math.random() * 40, 0.9 + Math.random() * 0.4, 0.55, 0.9, 0xffffff, 1);
+  }
+
   /** Big explosion: ring plus sparks. */
   explode(x: number, y: number, size: number): void {
     this.pop(x, y, size, 0xffffff, 0.4);

@@ -130,6 +130,22 @@ export class EnemyShots {
     return false;
   }
 
+  /** Turns every hostile projectile into a floating heart. Returns how many were converted. */
+  toHearts(): number {
+    let n = 0;
+    const lists = [this.bullets.items, this.drumsticks.items];
+    for (const items of lists) {
+      for (let i = 0; i < items.length; i++) {
+        const b = items[i];
+        if (!b.active) continue;
+        this.effects.floatHeart(b.x, b.y);
+        b.kill();
+        n++;
+      }
+    }
+    return n;
+  }
+
   /** Cancels every hostile projectile with a little sparkle. */
   clear(): void {
     this.clearIn(this.bullets.items);

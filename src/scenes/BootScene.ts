@@ -29,6 +29,7 @@ export class BootScene extends Phaser.Scene {
       this.load.once(`filecomplete-json-${h.texture}`, (_key: string, _type: string, meta: FlySheetMeta) => {
         this.load.spritesheet(h.texture, `${P}${h.texture}.png`, { frameWidth: meta.frameWidth, frameHeight: meta.frameHeight });
       });
+      this.load.image(h.superTexture, `${P}${h.superTexture}.png`);
       // Select-idle sheets are big; only their metadata loads now (TitleScene loads the sheet on demand).
       this.load.json(h.selectTexture, `${P}${h.selectTexture}.json`);
       for (const kind of ['select', 'damage', 'recover'] as const) {
@@ -181,6 +182,28 @@ export class BootScene extends Phaser.Scene {
       edge.addColorStop(1, 'rgba(0,0,0,0)');
       c.fillStyle = edge;
       c.fillRect(0, 0, 64, 32);
+    });
+
+    // On-screen Super (Positive Vibes Wave) button.
+    this.canvas('super-button', 128, 128, (c) => {
+      c.translate(64, 64);
+      c.beginPath();
+      c.arc(0, 0, 58, 0, Math.PI * 2);
+      c.fillStyle = 'rgba(18,24,82,.55)';
+      c.fill();
+      RAINBOW.forEach((col, i) => {
+        c.beginPath();
+        c.arc(0, 0, 60 - i * 2.2, 0, Math.PI * 2);
+        c.lineWidth = 2.4;
+        c.strokeStyle = col;
+        c.stroke();
+      });
+      heart(c, 30);
+      c.fillStyle = '#ff4fa6';
+      c.fill();
+      c.lineWidth = 4;
+      c.strokeStyle = '#ffffff';
+      c.stroke();
     });
 
     // Elon's lobbed web ball.

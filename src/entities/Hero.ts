@@ -40,6 +40,10 @@ export class Hero {
 
   readonly sprite: Phaser.GameObjects.Sprite;
   private readonly dot: Phaser.GameObjects.Image;
+  /** Spread-eagle super pose, swapped in while the Positive Vibes Wave fires. */
+  private readonly pose: Phaser.GameObjects.Image;
+  private poseLeft = 0;
+  private poseTime = 1;
   private stateTime = 0;
   private bobTime = 0;
   private tilt = 0;
@@ -61,6 +65,7 @@ export class Hero {
       .setDepth(Depth.Hero)
       .play(stats.flyAnim);
     this.dot = scene.add.image(this.x, this.y, 'hitbox').setDepth(Depth.Hitbox).setAlpha(0);
+    this.pose = scene.add.image(this.x, this.y, stats.superTexture).setDepth(Depth.Hero).setVisible(false);
     this.beginEnter();
   }
 
@@ -133,7 +138,17 @@ export class Hero {
     sp.setPosition(this.x, this.y + Math.sin(this.bobTime * m.bobSpeed) * m.bobAmplitude);
     sp.rotation = this.tilt;
     sp.setScale(scaleX, s.displayScale);
-    sp.setVisible(this.state === 'entering' || this.state === 'alive');
+    const flying = this.state === 'entering' || this.state === 'alive';
+    if (this.poseLeft > 0) this.poseLeft -= dt;
+    const posing = flying && this.poseLeft > 0;
+    sp.setVisible(flying && !posing);
+    this.pose.setVisible(posing);
+    if (posing) {
+      // Pop in big, settle, then shrink back into flight.
+      const t = 1 - this.poseLeft / this.poseTime;
+      const pop = t < 0.2 ? 0.7 + 1.5 * t : t > 0.8 ? 1 - (t - 0.8) * 2 : 1;
+      this.pose.setPosition(this.x, this.y).setScale(0.42 * pop);
+    }
     sp.setAlpha(this.invuln > 0 && Math.floor(this.invuln * 16) % 2 === 0 ? 0.35 : 1);
 
     // Hitbox dot: shown while focusing or moving slowly.
@@ -155,6 +170,18 @@ export class Hero {
     this.state = 'dead';
     this.stateTime = 0;
     return this.lives > 0 ? 'life' : 'gameover';
+  }
+
+  /** Swap to the super pose for `seconds` (Positive Vibes Wave), invincible meanwhile and after. */
+  superPose(seconds: number, invuln: number): void {
+    this.poseLeft = seconds;
+    this.poseTime = seconds;
+    this.invuln = Math.max(this.invuln, invuln);
+  }
+
+  /** Brief invincibility without losing anything (e.g. a companion took the hit). */
+  grantInvuln(seconds: number): void {
+    this.invuln = Math.max(this.invuln, seconds);
   }
 
   /** Fast fake horizontal spin (damage, power-up pickups). */

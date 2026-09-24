@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { Debug, Depth, GAME_WIDTH } from '../config';
+import { SUPER_WAVE } from '../data/superWave';
 
 const FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 const PIP_GAP = 16;
@@ -15,6 +16,8 @@ export class Hud {
   private readonly bossBar: Phaser.GameObjects.Rectangle;
   private readonly banner: Phaser.GameObjects.Text;
   private readonly fpsText: Phaser.GameObjects.Text | null;
+  private readonly superIcons: Phaser.GameObjects.Image[] = [];
+  private readonly superButton: Phaser.GameObjects.Image;
   private fpsTimer = 0;
 
   constructor(
@@ -31,6 +34,12 @@ export class Hud {
     for (let i = 0; i < hitsPerLife; i++) {
       this.pips.push(scene.add.image(18 + i * PIP_GAP, 50, 'pip').setDepth(Depth.Hud));
     }
+
+    for (let i = 0; i < SUPER_WAVE.maxStock; i++) {
+      this.superIcons.push(scene.add.image(20 + i * 22, 72, 'heart').setScale(0.55).setDepth(Depth.Hud));
+    }
+    const b = SUPER_WAVE.button;
+    this.superButton = scene.add.image(b.x, b.y, 'super-button').setDepth(Depth.Hud).setDisplaySize(b.radius * 2, b.radius * 2);
 
     this.scoreText = scene.add
       .text(GAME_WIDTH - 16, 12, '0', { fontFamily: FONT, fontSize: '22px', fontStyle: 'bold', color: '#ffffff', stroke: '#3a1a5a', strokeThickness: 5 })
@@ -58,6 +67,12 @@ export class Hud {
       const on = lives > 0 && i < hitsLeft;
       this.pips[i].setTint(on ? 0x7fe0ff : 0x444444).setAlpha(on ? 1 : 0.5);
     }
+  }
+
+  /** Positive Vibes Wave stock: hearts under the shield pips, and the touch button dims when empty. */
+  setSuper(stock: number): void {
+    for (let i = 0; i < this.superIcons.length; i++) this.superIcons[i].setVisible(i < stock);
+    this.superButton.setAlpha(stock > 0 ? 0.9 : 0.35);
   }
 
   setScore(score: number): void {

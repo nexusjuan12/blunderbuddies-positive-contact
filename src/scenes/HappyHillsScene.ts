@@ -3,6 +3,7 @@ import { Debug, Depth, GAME_HEIGHT, GAME_WIDTH } from '../config';
 import { MECHA_TURKEY } from '../data/bosses';
 import { ENEMIES } from '../data/enemies';
 import { HEROES, isHeroId, type HeroId, type HeroStats } from '../data/heroes';
+import { SUPER_WAVE } from '../data/superWave';
 import { HAPPY_HILLS, type WaveDef } from '../data/waves';
 import { Enemy, type EnemyContext } from '../entities/Enemy';
 import { Hero, type HeroState } from '../entities/Hero';
@@ -74,6 +75,7 @@ export class HappyHillsScene extends Phaser.Scene {
   private score = 0;
   private scoreDirty = false;
   private lastHeroState: HeroState = 'entering';
+  private superStock = 0;
 
   constructor() {
     super('HappyHills');
@@ -123,12 +125,15 @@ export class HappyHillsScene extends Phaser.Scene {
     this.hero = new Hero(this, stats);
     this.lastHeroState = this.hero.state;
     this.controls = new InputController(this);
+    this.controls.superButton = SUPER_WAVE.button;
+    this.superStock = SUPER_WAVE.startStock;
     this.voices = new VoiceBank(this);
     this.villainVoices = new VoiceBank(this, 1);
 
     this.hud = new Hud(this, stats.texture, stats.lives, stats.hitsPerLife);
     this.hud.setLives(this.hero.lives, this.hero.hitsLeft);
     this.hud.setScore(0);
+    this.hud.setSuper(this.superStock);
 
     if (Debug.showHitboxes) this.debugGfx = this.add.graphics().setDepth(Depth.Hud - 1);
 
@@ -174,6 +179,7 @@ export class HappyHillsScene extends Phaser.Scene {
       this.hud.setLives(hero.lives, hero.hitsLeft);
     }
     this.lastHeroState = hero.state;
+    if (this.controls.superPressed) this.tryFireSuper();
 
     this.weapon.update(dt, hero.firing && this.phase !== 'clear', hero.x, hero.y);
     this.projectiles.update(dt);
@@ -308,6 +314,28 @@ export class HappyHillsScene extends Phaser.Scene {
       }
     }
     this.hud.setLives(hero.lives, hero.hitsLeft);
+  }
+
+  private tryFireSuper(): void {
+    if (this.superStock <= 0 || this.hero.state !== 'alive' || this.phase === 'clear' || this.phase === 'over') return;
+    this.superStock--;
+    this.hud.setSuper(this.superStock);
+    this.fireSuperWave();
+  }
+
+  /** Positive Vibes Wave: hits everything on screen and turns every enemy bullet into a heart. */
+  fireSuperWave(): void {
+    const hero = this.hero;
+    hero.superPose(SUPER_WAVE.poseTime, SUPER_WAVE.invuln);
+    this.effects.pop(hero.x, hero.y, 34, 0xff9ad8, 0.8);
+    this.effects.pop(hero.x, hero.y, 24, 0xffffff, 0.6);
+    this.effects.pop(hero.x, hero.y, 14, 0xffe14d, 0.5);
+    this.cameras.main.flash(250, 255, 170, 225);
+    this.cameras.main.shake(250, 0.008);
+    this.addScore(this.enemyShots.toHearts() * SUPER_WAVE.heartScore);
+    const enemies = this.enemies.items;
+    for (let i = 0; i < enemies.length; i++) if (enemies[i].isTargetable()) enemies[i].takeDamage(SUPER_WAVE.enemyDamage);
+    if (this.boss.vulnerable) this.boss.takeDamage(SUPER_WAVE.bossDamage);
   }
 
   private readonly onEnemyKilled = (e: Enemy): void => {
