@@ -5,7 +5,7 @@ import { TITLE } from '../data/title';
 import type { FlySheetMeta } from '../entities/Hero';
 import { canvasTexture } from '../systems/canvasTexture';
 import { flower, heart, RAINBOW, rainbow } from '../systems/shapes';
-import { TITLE_FONT } from './TitleScene';
+import { pillTexture, TITLE_FONT, UI_K } from '../systems/uiText';
 
 const P = 'processed/';
 const MASTER_VOLUME = 0.5;
@@ -82,33 +82,8 @@ export class BootScene extends Phaser.Scene {
   private showGate(): void {
     this.cameras.main.setBackgroundColor(0x06051a);
     this.children.removeAll(true);
-    const cq = GAME_WIDTH / 100;
-    const k = 2;
-    const fs = 2.6 * cq * k;
-    const font = `800 ${fs}px "${TITLE_FONT}"`;
-    const spacing = `${0.16 * fs}px`;
-    const m = document.createElement('canvas').getContext('2d')!;
-    m.font = font;
-    m.letterSpacing = spacing;
-    const tw = m.measureText(TITLE.gateText).width;
-    const padX = 3.4 * cq * k;
-    const padY = 1.4 * cq * k;
-    const border = 0.25 * cq * k;
-    const w = tw + padX * 2 + border * 2;
-    const h = fs * 1.25 + padY * 2 + border * 2;
-    canvasTexture(this, 'gate-button', w, h, (c) => {
-      c.lineWidth = border;
-      c.strokeStyle = 'rgba(255,255,255,.7)';
-      c.beginPath();
-      c.roundRect(border / 2, border / 2, w - border, h - border, (h - border) / 2);
-      c.stroke();
-      c.font = font;
-      c.letterSpacing = spacing;
-      c.textBaseline = 'middle';
-      c.fillStyle = '#ffffff';
-      c.fillText(TITLE.gateText, border + padX, h / 2);
-    });
-    this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'gate-button').setScale(1 / k);
+    pillTexture(this, 'gate-button', TITLE.gateText);
+    this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'gate-button').setScale(1 / UI_K);
 
     const start = () => {
       if (isHeroId(Debug.hero)) this.scene.start('HappyHills', { hero: Debug.hero });

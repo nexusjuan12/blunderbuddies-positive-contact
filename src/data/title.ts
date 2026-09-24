@@ -16,10 +16,13 @@ export const TITLE = {
   sheenEvery: 6,
   burstCount: 110,
   tapBurstCount: 60,
-  /** Seconds between tapping "start" and the level beginning. */
-  startDelay: 0.7,
+  /** Seconds the chosen Buddy's standing idle is shown full-screen before the level starts. */
+  confirmHold: 1.5,
   words: ['BLUNDER', 'BUDDIES'],
   subtitle: 'POSITIVE CONTACT',
-  tapText: 'TAP TO PLAY',
+  tapText: 'CHOOSE YOUR BUDDY',
+  tapAgainText: 'TAP AGAIN TO PLAY',
   gateText: 'TAP TO BEGIN',
+  /** Which Buddy each collage panel shows. */
+  panelHeroes: { tl: 'oopsie', tr: 'whoopsie', bl: 'uhhuh', br: 'teehee', c: 'nuhuh' },
 } as const;

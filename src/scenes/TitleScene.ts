@@ -1,7 +1,11 @@
 import Phaser from 'phaser';
 import { GAME_HEIGHT as H, GAME_WIDTH as W } from '../config';
+import { HEROES, type HeroId } from '../data/heroes';
 import { TITLE } from '../data/title';
 import { canvasTexture } from '../systems/canvasTexture';
+import { flower, heart, rainbow, star } from '../systems/shapes';
+import { TITLE_FONT } from '../systems/uiText';
+import { VoiceBank } from '../systems/VoiceBank';
 import { cubicBezier, EASE, EASE_IN_OUT, EASE_OUT } from '../systems/easing';
 
 /** Panel crop, pop origin and clip polygon from tools/process_assets.py, all 0..1 of the art box. */
@@ -21,7 +25,6 @@ interface TitleLayout {
   frame: [number, number][][];
 }
 
-export const TITLE_FONT = 'PerfectDark';
 
 /** 1% of the stage width: the CSS `cqw` unit the original animation was written in. */
 const CQ = W / 100;
@@ -75,6 +78,27 @@ const PETALS = ['#ff8fd0', '#b98cff', '#8fe0ff', '#ffffff'];
 /** Particle textures are drawn with a shape size of 20 (the original's `s`). */
 const PARTICLE_BASE = 20;
 
+/** Select-idle sheet metadata written by tools/process_assets.py. */
+interface SelectSheetMeta {
+  frameWidth: number;
+  frameHeight: number;
+  frames: number;
+  fps: number;
+  /** Feet baseline as 0..1 of the frame height. */
+  feetY: number;
+}
+
+/** Even-odd point-in-polygon test. */
+function pointInPoly(x: number, y: number, poly: readonly [number, number][]): boolean {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i];
+    const [xj, yj] = poly[j];
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
 class Particle {
   active = false;
   x = 0;
@@ -109,18 +133,31 @@ export class TitleScene extends Phaser.Scene {
   private sheenCanvas!: HTMLCanvasElement;
   private layout!: TitleLayout;
 
-  private ready = false;
-  private starting = false;
+  /** intro -> select (choose a Buddy) -> confirming (zoom, then start). */
+  private mode: 'intro' | 'select' | 'confirming' = 'intro';
+  private selected: string | null = null;
+  private looks: Record<string, { b: number; s: number }> = {};
+  private glow: Phaser.Filters.Glow | null = null;
+  private lookTween: Phaser.Tweens.Tween | null = null;
+  private nameLabel!: Phaser.GameObjects.Image;
+  private nameIcons: Phaser.GameObjects.Image[] = [];
+  private hint!: Phaser.GameObjects.Image;
+  private voices!: VoiceBank;
   private tweenTokens: Phaser.Tweens.Tween[] = [];
 
   constructor() {
     super('Title');
   }
 
-  create(): void {
+  create(data?: { skipIntro?: boolean }): void {
     this.cachedFrame = null;
-    this.ready = false;
-    this.starting = false;
+    this.mode = 'intro';
+    this.selected = null;
+    this.looks = {};
+    this.glow = null;
+    this.lookTween = null;
+    this.nameIcons = [];
+    this.voices = new VoiceBank(this, 1, 0.25);
     this.words = [];
     this.particles = [];
     this.panels = {};
@@ -165,16 +202,24 @@ export class TitleScene extends Phaser.Scene {
     this.flash = this.add.rectangle(0, 0, W, H, 0xffffff).setOrigin(0).setAlpha(0).setBlendMode(Phaser.BlendModes.ADD);
     this.tap = this.add.image(W / 2, H * 0.955 - 1.9 * CQ, this.textTexture('title-tap', TITLE.tapText, 2.2, 0.18, COLORS.gold, 'rgba(255,205,58,.55)', 1.6));
     this.tap.setScale(1 / K).setAlpha(0);
+    this.nameLabel = this.add.image(W / 2, H * 0.915, '__DEFAULT').setScale(1 / K).setVisible(false);
+    for (let i = 0; i < 2; i++) this.nameIcons.push(this.add.image(0, H * 0.915, 'star').setVisible(false));
+    this.hint = this.add
+      .image(W / 2, H * 0.968, this.textTexture('title-hint', TITLE.tapAgainText, 1.2, 0.2, '#ffffff', 'rgba(134,233,255,.6)', 1))
+      .setScale(1 / K)
+      .setVisible(false);
 
     this.sound.stopAll();
     if (this.cache.audio.exists(TITLE.music)) this.sound.play(TITLE.music, { loop: true });
 
-    this.runTimeline();
+    if (data?.skipIntro) this.skipToEnd();
+    else this.runTimeline();
 
-    const onInput = () => this.onTap();
-    this.input.on(Phaser.Input.Events.POINTER_UP, onInput);
-    this.input.keyboard?.on(Phaser.Input.Keyboard.Events.ANY_KEY_DOWN, onInput);
-    this.input.gamepad?.on(Phaser.Input.Gamepad.Events.BUTTON_DOWN, onInput);
+    this.input.on(Phaser.Input.Events.POINTER_UP, (p: Phaser.Input.Pointer) => this.onPointer(p.x, p.y));
+    this.input.keyboard?.on(Phaser.Input.Keyboard.Events.ANY_KEY_DOWN, (e: KeyboardEvent) => this.onKey(e.code));
+    this.input.gamepad?.on(Phaser.Input.Gamepad.Events.BUTTON_DOWN, (_pad: Phaser.Input.Gamepad.Gamepad, button: Phaser.Input.Gamepad.Button) =>
+      this.onPadButton(button.index),
+    );
   }
 
   // ---------------------------------------------------------------- timeline
@@ -212,23 +257,197 @@ export class TitleScene extends Phaser.Scene {
     at(L + TITLE.tapDelay, () => this.showTap());
   }
 
-  private onTap(): void {
-    if (this.starting) return;
-    if (!this.ready) {
-      this.skipToEnd();
-      return;
+  // ---------------------------------------------------------------- buddy select
+
+  private onPointer(x: number, y: number): void {
+    if (this.mode === 'intro') return this.skipToEnd();
+    if (this.mode !== 'select') return;
+    const panel = this.panelAt(x, y);
+    if (panel) this.choose(panel);
+  }
+
+  private onKey(code: string): void {
+    if (this.mode === 'intro') return this.skipToEnd();
+    if (this.mode !== 'select') return;
+    const dirs: Record<string, [number, number]> = {
+      ArrowLeft: [-1, 0], KeyA: [-1, 0], ArrowRight: [1, 0], KeyD: [1, 0],
+      ArrowUp: [0, -1], KeyW: [0, -1], ArrowDown: [0, 1], KeyS: [0, 1],
+    };
+    if (dirs[code]) this.moveHighlight(dirs[code][0], dirs[code][1]);
+    else if (code === 'Enter' || code === 'Space' || code === 'KeyX' || code === 'NumpadEnter') this.choose(this.selected ?? 'c');
+  }
+
+  /** Standard gamepad layout: 0 = A, 12-15 = D-pad up/down/left/right. */
+  private onPadButton(index: number): void {
+    if (this.mode === 'intro') return this.skipToEnd();
+    if (this.mode !== 'select') return;
+    if (index === 12) this.moveHighlight(0, -1);
+    else if (index === 13) this.moveHighlight(0, 1);
+    else if (index === 14) this.moveHighlight(-1, 0);
+    else if (index === 15) this.moveHighlight(1, 0);
+    else if (index === 0) this.choose(this.selected ?? 'c');
+  }
+
+  /** First pick highlights a panel; picking the highlighted panel again confirms it. */
+  private choose(panel: string): void {
+    if (panel === this.selected) this.confirm(panel);
+    else this.highlight(panel);
+  }
+
+  /** Which panel is under a screen point (undoing the art's idle zoom). */
+  private panelAt(x: number, y: number): string | null {
+    const scale = this.art.scale;
+    const u = (x - this.art.x) / scale / ART_W + 0.5;
+    const v = (y - this.art.y) / scale / H + ART_PIVOT_Y;
+    for (const name of Object.keys(this.layout.panels)) {
+      if (pointInPoly(u, v, this.layout.panels[name].poly)) return name;
     }
-    this.starting = true;
+    return null;
+  }
+
+  private panelCentre(name: string): [number, number] {
+    const m = this.layout.panels[name];
+    return [m.x + m.w / 2, m.y + m.h / 2];
+  }
+
+  /** Arrow keys: move to the nearest panel in that direction (starting from the centre). */
+  private moveHighlight(dx: number, dy: number): void {
+    if (!this.selected) return this.highlight('c');
+    const [cx, cy] = this.panelCentre(this.selected);
+    let best: string | null = null;
+    let bestScore = Infinity;
+    for (const name of Object.keys(this.layout.panels)) {
+      if (name === this.selected) continue;
+      const [x, y] = this.panelCentre(name);
+      const along = (x - cx) * dx + (y - cy) * dy;
+      if (along <= 0.01) continue;
+      const across = Math.abs((x - cx) * dy - (y - cy) * dx);
+      const score = along + across * 2;
+      if (score < bestScore) {
+        bestScore = score;
+        best = name;
+      }
+    }
+    if (best) this.highlight(best);
+  }
+
+  private heroFor(panel: string): HeroId {
+    return TITLE.panelHeroes[panel as keyof typeof TITLE.panelHeroes];
+  }
+
+  private highlight(panel: string): void {
+    this.selected = panel;
+    const hero = HEROES[this.heroFor(panel)];
+    this.voices.play(hero.voices.select);
+    this.ensureSelectSheet(hero.id);
+
+    // Dim the others, brighten the chosen one.
+    const from: Record<string, { b: number; s: number }> = {};
+    for (const name of Object.keys(this.panels)) from[name] = { ...(this.looks[name] ?? { b: 1, s: 1.05 }) };
+    this.lookTween?.remove();
+    this.lookTween = this.animate(250, (t) => {
+      const e = EASE(t);
+      for (const name of Object.keys(this.panels)) {
+        const to = name === panel ? { b: 1.15, s: 1.15 } : { b: 0.35, s: 0.6 };
+        const b = from[name].b + (to.b - from[name].b) * e;
+        const s = from[name].s + (to.s - from[name].s) * e;
+        this.looks[name] = { b, s };
+        this.setPanelLook(name, b, s);
+        this.panels[name].image.setScale(0.5 * (name === panel ? 1 + 0.03 * e : 1));
+      }
+    });
+
+    // Glow around the chosen panel, drawn above its neighbours.
+    for (const name of Object.keys(this.panels)) {
+      const img = this.panels[name].image;
+      if (name !== panel) {
+        img.filters?.external.clear();
+        continue;
+      }
+      this.art.bringToTop(img);
+      this.art.bringToTop(this.frame);
+      img.filters?.external.clear();
+      this.glow = img.filters!.external.addGlow(0x86e9ff, 8, 0, 1.4);
+    }
+
+    // Name and attack icon in the bottom prompt slot.
+    this.tweens.killTweensOf(this.tap);
+    this.tap.setVisible(false);
+    const key = `title-name-${hero.id}`;
+    if (!this.textures.exists(key)) this.textTexture(key, hero.name, 2.4, 0.16, '#ffffff', 'rgba(134,233,255,.7)', 1.4);
+    this.nameLabel.setTexture(key).setVisible(true).setScale(0.8 / K);
+    this.tweens.killTweensOf(this.nameLabel);
+    this.tweens.add({ targets: this.nameLabel, scale: 1 / K, duration: 260, ease: 'Back.easeOut' });
+    const half = this.nameLabel.width / K / 2;
+    this.nameIcons.forEach((icon, i) => {
+      icon.setTexture(hero.icon).setVisible(true).setScale(0.8);
+      icon.setPosition(W / 2 + (i === 0 ? -1 : 1) * (half + 18), H * 0.915);
+    });
+    this.hint.setVisible(true);
+  }
+
+  private confirm(panel: string): void {
+    this.mode = 'confirming';
+    const hero = HEROES[this.heroFor(panel)];
+    this.ensureSelectSheet(hero.id, () => this.zoomToHero(panel, hero.id));
+  }
+
+  /** The chosen Buddy's standing idle grows from their panel to fill the screen, then the level starts. */
+  private zoomToHero(panel: string, id: HeroId): void {
+    const hero = HEROES[id];
+    const meta = this.cache.json.get(hero.selectTexture) as SelectSheetMeta;
+    const m = this.layout.panels[panel];
+    const [u, v] = this.panelCentre(panel);
+    const startX = this.art.x + this.artX(u) * this.art.scale;
+    const startY = this.art.y + this.artY(v + m.h * 0.4) * this.art.scale;
+    const startScale = (m.h * H * 0.9) / meta.frameHeight;
+    // Leave headroom above the helmet horns.
+    const endScale = (H - 44) / (meta.frameHeight * meta.feetY);
+
+    const dim = this.add.rectangle(0, 0, W, H, COLORS.void).setOrigin(0).setAlpha(0);
+    const sprite = this.add.sprite(startX, startY, hero.selectTexture, 0).setOrigin(0.5, meta.feetY).setScale(startScale);
+    sprite.play(hero.selectAnim);
+    this.children.bringToTop(this.flash);
     this.doFlash();
-    this.burst(TITLE.tapBurstCount);
-    this.time.delayedCall(TITLE.startDelay * 1000, () => {
-      this.cameras.main.fadeOut(350, 6, 5, 26);
-      this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.start('HappyHills'));
+    this.hint.setVisible(false);
+    this.nameLabel.setVisible(false);
+    for (const icon of this.nameIcons) icon.setVisible(false);
+    this.tweens.add({ targets: dim, alpha: 0.7, duration: 500 });
+    this.tweens.add({ targets: sprite, x: W / 2, y: H - 4, scale: endScale, duration: 650, ease: 'Back.easeOut' });
+    this.time.delayedCall(TITLE.confirmHold * 1000, () => {
+      this.cameras.main.fadeOut(400, 6, 5, 26);
+      this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.start('HappyHills', { hero: id }));
     });
   }
 
-  /** A tap during the intro jumps straight to the finished title. */
+  /** Select-idle sheets are large, so each loads the first time its Buddy is highlighted. */
+  private ensureSelectSheet(id: HeroId, then?: () => void): void {
+    const hero = HEROES[id];
+    const ready = () => {
+      if (!this.anims.exists(hero.selectAnim)) {
+        const meta = this.cache.json.get(hero.selectTexture) as SelectSheetMeta;
+        this.anims.create({
+          key: hero.selectAnim,
+          frames: this.anims.generateFrameNumbers(hero.selectTexture, { start: 0, end: meta.frames - 1 }),
+          frameRate: meta.fps,
+          repeat: -1,
+        });
+      }
+      then?.();
+    };
+    if (this.textures.exists(hero.selectTexture)) return ready();
+    const meta = this.cache.json.get(hero.selectTexture) as SelectSheetMeta;
+    this.load.once(`filecomplete-spritesheet-${hero.selectTexture}`, ready);
+    this.load.spritesheet(hero.selectTexture, `processed/${hero.selectTexture}.png`, {
+      frameWidth: meta.frameWidth,
+      frameHeight: meta.frameHeight,
+    });
+    if (!this.load.isLoading()) this.load.start();
+  }
+
+  /** A tap during the intro jumps straight to the finished title (never selects anything). */
   private skipToEnd(): void {
+    if (this.mode !== 'intro') return;
     this.time.removeAllEvents();
     for (const t of this.tweenTokens) t.remove();
     this.tweenTokens = [];
@@ -561,7 +780,7 @@ export class TitleScene extends Phaser.Scene {
   }
 
   private showTap(): void {
-    this.ready = true;
+    this.mode = 'select';
     this.tap.setAlpha(1);
     this.track(this.tweens.add({ targets: this.tap, alpha: 0.35, duration: 750, ease: 'Sine.easeInOut', yoyo: true, repeat: -1 }));
     this.track(this.tweens.add({ targets: this.art, scale: 1.045, duration: 16000, ease: 'Sine.easeInOut', yoyo: true, repeat: -1 }));
@@ -691,50 +910,17 @@ export class TitleScene extends Phaser.Scene {
       });
     };
     at('tp-heart', (c) => {
+      heart(c, s);
       c.fillStyle = '#ff4fa6';
-      c.beginPath();
-      c.moveTo(0, s * 0.35);
-      c.bezierCurveTo(-s * 1.1, -s * 0.35, -s * 0.45, -s * 1.05, 0, -s * 0.45);
-      c.bezierCurveTo(s * 0.45, -s * 1.05, s * 1.1, -s * 0.35, 0, s * 0.35);
       c.fill();
     });
     at('tp-star', (c) => {
+      star(c, s);
       c.fillStyle = '#ffd23f';
-      c.beginPath();
-      for (let i = 0; i < 10; i++) {
-        const r = i % 2 ? s * 0.42 : s;
-        const a = -Math.PI / 2 + (i * Math.PI) / 5;
-        c.lineTo(Math.cos(a) * r, Math.sin(a) * r);
-      }
-      c.closePath();
       c.fill();
     });
-    PETALS.forEach((petal, n) =>
-      at(`tp-flower-${n}`, (c) => {
-        c.fillStyle = petal;
-        for (let i = 0; i < 5; i++) {
-          const a = (i * Math.PI * 2) / 5;
-          c.beginPath();
-          c.arc(Math.cos(a) * s * 0.5, Math.sin(a) * s * 0.5, s * 0.42, 0, 7);
-          c.fill();
-        }
-        c.fillStyle = '#ffd23f';
-        c.beginPath();
-        c.arc(0, 0, s * 0.32, 0, 7);
-        c.fill();
-      }),
-    );
-    at('tp-rainbow', (c) => {
-      const cols = ['#ff3b5c', '#ff9f1c', '#ffe23f', '#4fdc6b', '#3fa7ff', '#9b5cff'];
-      const rs = s * 1.3;
-      c.lineWidth = rs * 0.16;
-      cols.forEach((col, i) => {
-        c.strokeStyle = col;
-        c.beginPath();
-        c.arc(0, rs * 0.4, rs - i * rs * 0.16, Math.PI, 0);
-        c.stroke();
-      });
-    });
+    PETALS.forEach((petal, n) => at(`tp-flower-${n}`, (c) => flower(c, s, petal)));
+    at('tp-rainbow', (c) => rainbow(c, s * 1.3));
   }
 
   // ---------------------------------------------------------------- particles
@@ -767,7 +953,10 @@ export class TitleScene extends Phaser.Scene {
     }
   }
 
-  override update(_time: number, deltaMs: number): void {
+  override update(time: number, deltaMs: number): void {
+    // Pulse the highlighted panel's glow.
+    if (this.glow) this.glow.outerStrength = 5 + 3 * Math.sin(time / 160);
+
     // The original stepped once per 60 fps frame; scale by elapsed frames.
     const f = Math.min(deltaMs, 50) / (1000 / 60);
     const damp = Math.pow(0.975, f);

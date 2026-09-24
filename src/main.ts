@@ -1,11 +1,11 @@
 import Phaser from 'phaser';
-import { GAME_HEIGHT, GAME_WIDTH } from './config';
+import { Debug, GAME_HEIGHT, GAME_WIDTH } from './config';
 import { BootScene } from './scenes/BootScene';
 import { HappyHillsScene } from './scenes/HappyHillsScene';
 import { ResultScene } from './scenes/ResultScene';
 import { TitleScene } from './scenes/TitleScene';
 
-new Phaser.Game({
+const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: 'game',
   width: GAME_WIDTH,
@@ -20,3 +20,5 @@ new Phaser.Game({
   render: { antialias: true, powerPreference: 'high-performance' },
   scene: [BootScene, TitleScene, HappyHillsScene, ResultScene],
 });
+
+if (Debug.expose) (window as unknown as { game: Phaser.Game }).game = game;

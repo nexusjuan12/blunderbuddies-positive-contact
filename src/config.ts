@@ -22,6 +22,8 @@ export const Debug = {
   skipToBoss: params.has('boss'),
   showHitboxes: params.has('hitboxes'),
   invincible: params.has('god'),
+  /** Expose the Phaser game as `window.game` for automated testing. */
+  expose: params.has('debug'),
   /** Start the level directly with this Buddy (after the tap-to-begin gate). */
   hero: params.get('hero'),
   /** Start with this many random companions. */
