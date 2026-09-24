@@ -206,6 +206,29 @@ export class BootScene extends Phaser.Scene {
       c.stroke();
     });
 
+    // Team pickup: a glowing orb with the five Buddies' colours.
+    this.canvas('team-pickup', 48, 48, (c) => {
+      c.translate(24, 24);
+      const g = c.createRadialGradient(0, 0, 2, 0, 0, 22);
+      g.addColorStop(0, 'rgba(255,255,255,1)');
+      g.addColorStop(0.55, 'rgba(255,225,120,.9)');
+      g.addColorStop(1, 'rgba(255,160,220,0)');
+      c.fillStyle = g;
+      c.beginPath();
+      c.arc(0, 0, 22, 0, Math.PI * 2);
+      c.fill();
+      ['#ff8a1c', '#ff4fa6', '#8a4dff', '#3fa7ff', '#4fdc6b'].forEach((col, i) => {
+        const a = -Math.PI / 2 + (i * Math.PI * 2) / 5;
+        c.beginPath();
+        c.arc(Math.cos(a) * 11, Math.sin(a) * 11, 4.5, 0, Math.PI * 2);
+        c.fillStyle = col;
+        c.fill();
+        c.lineWidth = 1.5;
+        c.strokeStyle = '#ffffff';
+        c.stroke();
+      });
+    });
+
     // Elon's lobbed web ball.
     this.canvas('web', 22, 22, (c) => {
       c.beginPath();

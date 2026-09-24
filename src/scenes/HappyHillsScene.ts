@@ -2,12 +2,14 @@ import Phaser from 'phaser';
 import { Debug, Depth, GAME_HEIGHT, GAME_WIDTH } from '../config';
 import { MECHA_TURKEY } from '../data/bosses';
 import { ENEMIES } from '../data/enemies';
-import { HEROES, isHeroId, type HeroId, type HeroStats } from '../data/heroes';
+import { HERO_IDS, HEROES, isHeroId, type HeroId, type HeroStats } from '../data/heroes';
 import { SUPER_WAVE } from '../data/superWave';
+import { TEAM } from '../data/team';
 import { HAPPY_HILLS, type WaveDef } from '../data/waves';
 import { Enemy, type EnemyContext } from '../entities/Enemy';
 import { Hero, type HeroState } from '../entities/Hero';
 import { MechaTurkey, type Rig } from '../entities/MechaTurkey';
+import { TeamPickup } from '../entities/TeamPickup';
 import type { Target } from '../entities/Target';
 import { Effects } from '../systems/Effects';
 import { EnemyShots } from '../systems/EnemyShots';
@@ -15,14 +17,16 @@ import { HeroProjectiles } from '../systems/HeroProjectiles';
 import { Hud } from '../systems/Hud';
 import { InputController } from '../systems/InputController';
 import { Pool } from '../systems/Pool';
+import { Team } from '../systems/Team';
 import type { ResultData } from './ResultScene';
 import { VoiceBank } from '../systems/VoiceBank';
-import { createWeapon, type Weapon } from '../systems/weapons/Weapon';
+import { createWeapon, type Weapon, type WeaponContext } from '../systems/weapons/Weapon';
 
 interface Spawn {
   at: number;
   def: (typeof ENEMIES)[keyof typeof ENEMIES];
   y: number;
+  carrier: boolean;
 }
 
 type LevelPhase = 'waves' | 'warning' | 'boss' | 'clear' | 'over';
@@ -51,6 +55,8 @@ export class HappyHillsScene extends Phaser.Scene {
   private stats!: HeroStats;
   private projectiles!: HeroProjectiles;
   private weapon!: Weapon;
+  private team!: Team;
+  private pickups!: Pool<TeamPickup>;
   private enemyShots!: EnemyShots;
   private enemies!: Pool<Enemy>;
   private boss!: MechaTurkey;
@@ -118,12 +124,20 @@ export class HappyHillsScene extends Phaser.Scene {
     });
 
     const targets: Target[] = [...this.enemies.items, ...this.boss.hurtboxes];
-    this.projectiles = new HeroProjectiles(this, targets, (x, y) => this.effects.sparks(x, y, 2, 0xffe680, 90));
-    this.weapon = createWeapon(stats.weapon, { scene: this, projectiles: this.projectiles, enemyShots: this.enemyShots, effects: this.effects });
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.weapon.destroy());
+    this.projectiles = new HeroProjectiles(this, targets, (x, y) => this.effects.sparks(x, y, 2, 0xffe680, 90), 420);
+    const ctx: WeaponContext = { scene: this, projectiles: this.projectiles, enemyShots: this.enemyShots, effects: this.effects };
+    this.weapon = createWeapon(stats.weapon, ctx);
+    this.team = new Team(this, ctx);
+    this.pickups = new Pool(8, () => new TeamPickup(this));
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.weapon.destroy();
+      this.team.destroy();
+    });
 
     this.hero = new Hero(this, stats);
     this.lastHeroState = this.hero.state;
+    this.team.resetPath(this.hero.x, this.hero.y);
+    for (let i = 0; i < Math.min(Debug.team, TEAM.maxCompanions); i++) this.team.add(this.randomRecruit(), this.hero.x, this.hero.y);
     this.controls = new InputController(this);
     this.controls.superButton = SUPER_WAVE.button;
     this.superStock = SUPER_WAVE.startStock;
@@ -181,7 +195,10 @@ export class HappyHillsScene extends Phaser.Scene {
     this.lastHeroState = hero.state;
     if (this.controls.superPressed) this.tryFireSuper();
 
-    this.weapon.update(dt, hero.firing && this.phase !== 'clear', hero.x, hero.y);
+    const firing = hero.firing && this.phase !== 'clear';
+    this.weapon.update(dt, firing, hero.x, hero.y);
+    this.team.update(dt, hero.x, hero.y, firing);
+    this.updatePickups(dt);
     this.projectiles.update(dt);
 
     const ctx = this.enemyCtx;
@@ -235,7 +252,7 @@ export class HappyHillsScene extends Phaser.Scene {
         while (this.spawnIndex < spawns.length && spawns[this.spawnIndex].at <= this.levelTime) {
           const s = spawns[this.spawnIndex++];
           const e = this.enemies.obtain();
-          if (e) e.spawn(s.def, GAME_WIDTH + ENEMY_SPAWN_MARGIN, s.y);
+          if (e) e.spawn(s.def, GAME_WIDTH + ENEMY_SPAWN_MARGIN, s.y, s.carrier);
         }
         const lastAt = spawns.length ? spawns[spawns.length - 1].at : 0;
         if (this.spawnIndex >= spawns.length && this.levelTime >= lastAt + HAPPY_HILLS.bossDelay) {
@@ -296,6 +313,16 @@ export class HappyHillsScene extends Phaser.Scene {
 
   private onHeroHit(): void {
     const hero = this.hero;
+    if (!hero.vulnerable) return;
+    // A companion takes the hit first: the last one in line is knocked off.
+    if (this.team.knockOff()) {
+      hero.grantInvuln(TEAM.knockOffInvuln);
+      hero.spin();
+      this.voices.play(this.stats.voices.damage);
+      this.effects.pop(hero.x, hero.y, 1.4, 0xffffff);
+      this.cameras.main.shake(150, 0.006);
+      return;
+    }
     const result = hero.hit();
     if (result === 'ignored') return;
 
@@ -338,8 +365,57 @@ export class HappyHillsScene extends Phaser.Scene {
     if (this.boss.vulnerable) this.boss.takeDamage(SUPER_WAVE.bossDamage);
   }
 
+  private updatePickups(dt: number): void {
+    const hero = this.hero;
+    const items = this.pickups.items;
+    const r = TEAM.pickup.radius + hero.stats.hitboxRadius;
+    for (let i = 0; i < items.length; i++) {
+      const p = items[i];
+      if (!p.active) continue;
+      p.update(dt);
+      if (!p.active || hero.state !== 'alive') continue;
+      const dx = p.x - hero.x;
+      const dy = p.y - hero.y;
+      if (dx * dx + dy * dy < r * r) {
+        p.kill();
+        this.collectPickup();
+      }
+    }
+  }
+
+  /** A random Buddy not already flying: never the hero, never someone on the team. */
+  private randomRecruit(): HeroId {
+    const taken = new Set<HeroId>([this.stats.id, ...this.team.members.map((m) => m.id)]);
+    const free = HERO_IDS.filter((id) => !taken.has(id));
+    return free[Math.floor(Math.random() * free.length)];
+  }
+
+  private collectPickup(): void {
+    const hero = this.hero;
+    hero.spin();
+    this.addScore(TEAM.pickup.score);
+    this.effects.pop(hero.x, hero.y, 2, 0xffe14d, 0.4);
+    if (this.team.full) {
+      // Full team: faster fire for everyone instead.
+      this.weapon.rate = this.team.boost();
+      return;
+    }
+    const id = this.randomRecruit();
+    this.team.add(id, hero.x - 40, hero.y);
+    this.voices.play(HEROES[id].voices.select);
+    if (this.team.full) this.teamFormed();
+  }
+
+  /** All five Buddies together: flash, invincibility and a free Positive Vibes Wave. */
+  private teamFormed(): void {
+    this.hud.showBanner('TEAM FORMED!', 2, '#86e9ff');
+    this.hero.grantInvuln(TEAM.formedInvuln);
+    this.fireSuperWave();
+  }
+
   private readonly onEnemyKilled = (e: Enemy): void => {
     this.effects.explode(e.x, e.y, e.radius / 30);
+    if (e.carrier) this.pickups.obtain()?.spawn(e.x, e.y);
     if (e.def) this.addScore(e.def.score);
   };
 
@@ -386,7 +462,12 @@ function buildSpawns(waves: readonly WaveDef[]): Spawn[] {
     const margin = def.displayHeight / 2 + 10;
     for (let i = 0; i < w.count; i++) {
       const y = w.y === 'random' ? Phaser.Math.FloatBetween(margin, GAME_HEIGHT - margin) : w.y + (w.yStep ?? 0) * i;
-      out.push({ at: w.at + w.spacing * i, def, y: Phaser.Math.Clamp(y, margin, GAME_HEIGHT - margin) });
+      out.push({
+        at: w.at + w.spacing * i,
+        def,
+        y: Phaser.Math.Clamp(y, margin, GAME_HEIGHT - margin),
+        carrier: !!w.carrier && i === w.count - 1,
+      });
     }
   }
   return out.sort((a, b) => a.at - b.at);

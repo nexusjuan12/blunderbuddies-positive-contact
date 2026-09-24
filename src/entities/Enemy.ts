@@ -13,7 +13,7 @@ export interface EnemyContext {
 const FLASH_TIME = 0.06;
 const TELEGRAPH_TINT = 0xff5a5a;
 
-const Look = { Normal: 0, Flash: 1, Telegraph: 2 } as const;
+const Look = { Normal: 0, Flash: 1, Telegraph: 2, Carrier: 3 } as const;
 type Look = (typeof Look)[keyof typeof Look];
 
 /** Walk-sheet metadata (tools/process_assets.py), all 0..1 of the frame. */
@@ -25,6 +25,8 @@ interface WalkSheetMeta {
 /** A pooled enemy: mimic heads and Elons. Behaviour is chosen by its data definition. */
 export class Enemy extends Phaser.GameObjects.Sprite implements Target {
   def: EnemyDef | null = null;
+  /** Glows and drops a team pickup when destroyed. */
+  carrier = false;
   hp = 0;
   radius = 0;
   private age = 0;
@@ -50,8 +52,9 @@ export class Enemy extends Phaser.GameObjects.Sprite implements Target {
     this.setActive(false).setVisible(false);
   }
 
-  spawn(def: EnemyDef, x: number, y: number): void {
+  spawn(def: EnemyDef, x: number, y: number, carrier = false): void {
     this.def = def;
+    this.carrier = carrier;
     this.hp = def.hp;
     this.radius = def.radius;
     this.age = 0;
@@ -190,6 +193,8 @@ export class Enemy extends Phaser.GameObjects.Sprite implements Target {
       look = Look.Flash;
     } else if (def.behavior === 'charger' && this.step === 1 && Math.floor(this.stepTime * 12) % 2 === 0) {
       look = Look.Telegraph;
+    } else if (this.carrier && Math.floor(this.age * 5) % 2 === 0) {
+      look = Look.Carrier;
     }
     this.applyLook(look);
 
@@ -203,6 +208,7 @@ export class Enemy extends Phaser.GameObjects.Sprite implements Target {
     this.look = look;
     if (look === Look.Flash) this.setTint(0xffffff).setTintMode(Phaser.TintModes.FILL);
     else if (look === Look.Telegraph) this.setTint(TELEGRAPH_TINT).setTintMode(Phaser.TintModes.MULTIPLY);
+    else if (look === Look.Carrier) this.setTint(0x806000).setTintMode(Phaser.TintModes.ADD);
     else this.clearTint();
   }
 }
