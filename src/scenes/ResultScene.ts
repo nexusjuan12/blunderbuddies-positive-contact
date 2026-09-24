@@ -1,9 +1,11 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH } from '../config';
+import type { HeroId } from '../data/heroes';
 
 export interface ResultData {
   won: boolean;
   score: number;
+  hero: HeroId;
 }
 
 /** Stage clear / game over screen. Any input restarts the level. */
@@ -25,7 +27,7 @@ export class ResultScene extends Phaser.Scene {
 
     // Short delay so a held key or finger from gameplay doesn't instantly restart.
     this.time.delayedCall(800, () => {
-      const again = () => this.scene.start('HappyHills');
+      const again = () => this.scene.start('HappyHills', { hero: data.hero });
       this.input.once(Phaser.Input.Events.POINTER_UP, again);
       this.input.keyboard?.once(Phaser.Input.Keyboard.Events.ANY_KEY_DOWN, again);
       this.input.gamepad?.once(Phaser.Input.Gamepad.Events.BUTTON_DOWN, again);

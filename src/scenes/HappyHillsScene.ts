@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { Debug, Depth, GAME_HEIGHT, GAME_WIDTH } from '../config';
 import { MECHA_TURKEY } from '../data/bosses';
 import { ENEMIES } from '../data/enemies';
-import { NUH_UH } from '../data/heroes';
+import { HEROES, isHeroId, type HeroId, type HeroStats } from '../data/heroes';
 import { HAPPY_HILLS, type WaveDef } from '../data/waves';
 import { Enemy, type EnemyContext } from '../entities/Enemy';
 import { Hero, type HeroState } from '../entities/Hero';
@@ -10,12 +10,13 @@ import { MechaTurkey, type Rig } from '../entities/MechaTurkey';
 import type { Target } from '../entities/Target';
 import { Effects } from '../systems/Effects';
 import { EnemyShots } from '../systems/EnemyShots';
-import { HeroShots } from '../systems/HeroShots';
+import { HeroProjectiles } from '../systems/HeroProjectiles';
 import { Hud } from '../systems/Hud';
 import { InputController } from '../systems/InputController';
 import { Pool } from '../systems/Pool';
 import type { ResultData } from './ResultScene';
 import { VoiceBank } from '../systems/VoiceBank';
+import { createWeapon, type Weapon } from '../systems/weapons/Weapon';
 
 interface Spawn {
   at: number;
@@ -46,7 +47,9 @@ const RESULT_DELAY = 2500;
 export class HappyHillsScene extends Phaser.Scene {
   private controls!: InputController;
   private hero!: Hero;
-  private heroShots!: HeroShots;
+  private stats!: HeroStats;
+  private projectiles!: HeroProjectiles;
+  private weapon!: Weapon;
   private enemyShots!: EnemyShots;
   private enemies!: Pool<Enemy>;
   private boss!: MechaTurkey;
@@ -76,7 +79,12 @@ export class HappyHillsScene extends Phaser.Scene {
     super('HappyHills');
   }
 
+  init(data: { hero?: HeroId }): void {
+    this.stats = HEROES[isHeroId(data?.hero) ? data.hero : 'nuhuh'];
+  }
+
   create(): void {
+    const stats = this.stats;
     this.levelTime = 0;
     this.phase = 'waves';
     this.phaseTime = 0;
@@ -108,15 +116,17 @@ export class HappyHillsScene extends Phaser.Scene {
     });
 
     const targets: Target[] = [...this.enemies.items, ...this.boss.hurtboxes];
-    this.heroShots = new HeroShots(this, NUH_UH.shot, targets, (x, y) => this.effects.sparks(x, y, 2, 0xffe680, 90));
+    this.projectiles = new HeroProjectiles(this, targets, (x, y) => this.effects.sparks(x, y, 2, 0xffe680, 90));
+    this.weapon = createWeapon(stats.weapon, { scene: this, projectiles: this.projectiles, enemyShots: this.enemyShots, effects: this.effects });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.weapon.destroy());
 
-    this.hero = new Hero(this, NUH_UH);
+    this.hero = new Hero(this, stats);
     this.lastHeroState = this.hero.state;
     this.controls = new InputController(this);
     this.voices = new VoiceBank(this);
     this.villainVoices = new VoiceBank(this, 1);
 
-    this.hud = new Hud(this, NUH_UH.texture, NUH_UH.lives, NUH_UH.hitsPerLife);
+    this.hud = new Hud(this, stats.texture, stats.lives, stats.hitsPerLife);
     this.hud.setLives(this.hero.lives, this.hero.hitsLeft);
     this.hud.setScore(0);
 
@@ -160,12 +170,13 @@ export class HappyHillsScene extends Phaser.Scene {
     const hero = this.hero;
     hero.update(dt, this.controls);
     if (this.lastHeroState === 'dead' && hero.state === 'entering') {
-      this.voices.play(NUH_UH.voices.respawn);
+      this.voices.play(this.stats.voices.recover);
       this.hud.setLives(hero.lives, hero.hitsLeft);
     }
     this.lastHeroState = hero.state;
 
-    this.heroShots.update(dt, hero.firing && this.phase !== 'clear', hero.x, hero.y);
+    this.weapon.update(dt, hero.firing && this.phase !== 'clear', hero.x, hero.y);
+    this.projectiles.update(dt);
 
     const ctx = this.enemyCtx;
     ctx.heroX = hero.x;
@@ -282,7 +293,7 @@ export class HappyHillsScene extends Phaser.Scene {
     const result = hero.hit();
     if (result === 'ignored') return;
 
-    this.voices.play(NUH_UH.voices.hurt);
+    this.voices.play(this.stats.voices.damage);
     if (result === 'shield') {
       this.effects.pop(hero.x, hero.y, 1.6, 0x7fe0ff);
       this.cameras.main.shake(150, 0.006);
@@ -316,7 +327,7 @@ export class HappyHillsScene extends Phaser.Scene {
 
   private finish(won: boolean): void {
     this.sound.stopAll();
-    const data: ResultData = { won, score: this.score };
+    const data: ResultData = { won, score: this.score, hero: this.stats.id };
     this.scene.start('Result', data);
   }
 

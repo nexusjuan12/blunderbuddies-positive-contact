@@ -15,11 +15,15 @@ export const Depth = {
   Hud: 100,
 } as const;
 
-/** Debug switches from the URL, e.g. `?fps&boss&hitboxes`. */
+/** Debug switches from the URL, e.g. `?fps&boss&hitboxes&hero=oopsie&team=4`. */
 const params = new URLSearchParams(window.location.search);
 export const Debug = {
   showFps: params.has('fps'),
   skipToBoss: params.has('boss'),
   showHitboxes: params.has('hitboxes'),
   invincible: params.has('god'),
+  /** Start the level directly with this Buddy (after the tap-to-begin gate). */
+  hero: params.get('hero'),
+  /** Start with this many random companions. */
+  team: Number(params.get('team') ?? 0) || 0,
 } as const;

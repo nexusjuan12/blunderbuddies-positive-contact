@@ -1,9 +1,10 @@
 import Phaser from 'phaser';
-import { GAME_HEIGHT, GAME_WIDTH } from '../config';
-import { NUH_UH } from '../data/heroes';
+import { Debug, GAME_HEIGHT, GAME_WIDTH } from '../config';
+import { HERO_IDS, HEROES, isHeroId } from '../data/heroes';
 import { TITLE } from '../data/title';
 import type { FlySheetMeta } from '../entities/Hero';
 import { canvasTexture } from '../systems/canvasTexture';
+import { flower, heart, RAINBOW, rainbow } from '../systems/shapes';
 import { TITLE_FONT } from './TitleScene';
 
 const P = 'processed/';
@@ -21,11 +22,19 @@ export class BootScene extends Phaser.Scene {
     const bar = this.add.rectangle(frame.x - barW / 2, frame.y, 1, 14, 0xffd23f).setOrigin(0, 0.5);
     this.load.on(Phaser.Loader.Events.PROGRESS, (v: number) => (bar.width = barW * v));
 
-    // The flight sheet's frame size lives in its JSON, so queue the sheet once that has loaded.
-    this.load.json('hero-nuhuh-fly', `${P}hero-nuhuh-fly.json`);
-    this.load.once('filecomplete-json-hero-nuhuh-fly', (_key: string, _type: string, meta: FlySheetMeta) => {
-      this.load.spritesheet('hero-nuhuh-fly', `${P}hero-nuhuh-fly.png`, { frameWidth: meta.frameWidth, frameHeight: meta.frameHeight });
-    });
+    // Each flight sheet's frame size lives in its JSON, so queue the sheet once that has loaded.
+    for (const id of HERO_IDS) {
+      const h = HEROES[id];
+      this.load.json(h.texture, `${P}${h.texture}.json`);
+      this.load.once(`filecomplete-json-${h.texture}`, (_key: string, _type: string, meta: FlySheetMeta) => {
+        this.load.spritesheet(h.texture, `${P}${h.texture}.png`, { frameWidth: meta.frameWidth, frameHeight: meta.frameHeight });
+      });
+      // Select-idle sheets are big; only their metadata loads now (TitleScene loads the sheet on demand).
+      this.load.json(h.selectTexture, `${P}${h.selectTexture}.json`);
+      for (const kind of ['select', 'damage', 'recover'] as const) {
+        for (const key of h.voices[kind]) this.load.audio(key, `${P}${key}.mp3`);
+      }
+    }
     this.load.image('mimic-1', `${P}mimic-1.png`);
     this.load.image('mimic-2', `${P}mimic-2.png`);
     this.load.image('mimic-3', `${P}mimic-3.png`);
@@ -46,8 +55,6 @@ export class BootScene extends Phaser.Scene {
     this.load.audio('music-title', [`${P}music-title.ogg`, `${P}music-title.mp3`]);
 
     this.load.audio('music-happy-hills', [`${P}music-happy-hills.ogg`, `${P}music-happy-hills.mp3`]);
-    this.load.audio('voice-nuhuh-hurt', `${P}voice-nuhuh-hurt.mp3`);
-    this.load.audio('voice-nuhuh-defiant', `${P}voice-nuhuh-defiant.mp3`);
     this.load.audio('voice-uhuhno-taunt', `${P}voice-uhuhno-taunt.mp3`);
     this.load.audio('voice-uhuhno-defeat', `${P}voice-uhuhno-defeat.mp3`);
   }
@@ -57,13 +64,16 @@ export class BootScene extends Phaser.Scene {
     this.sound.volume = MASTER_VOLUME;
     this.makePlaceholders();
 
-    const fly = this.cache.json.get('hero-nuhuh-fly') as FlySheetMeta;
-    this.anims.create({
-      key: NUH_UH.flyAnim,
-      frames: this.anims.generateFrameNumbers(NUH_UH.texture, { start: 0, end: fly.frames - 1 }),
-      frameRate: fly.fps,
-      repeat: -1,
-    });
+    for (const id of HERO_IDS) {
+      const h = HEROES[id];
+      const fly = this.cache.json.get(h.texture) as FlySheetMeta;
+      this.anims.create({
+        key: h.flyAnim,
+        frames: this.anims.generateFrameNumbers(h.texture, { start: 0, end: fly.frames - 1 }),
+        frameRate: fly.fps,
+        repeat: -1,
+      });
+    }
 
     this.showGate();
   }
@@ -100,7 +110,10 @@ export class BootScene extends Phaser.Scene {
     });
     this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'gate-button').setScale(1 / k);
 
-    const start = () => this.scene.start('Title');
+    const start = () => {
+      if (isHeroId(Debug.hero)) this.scene.start('HappyHills', { hero: Debug.hero });
+      else this.scene.start('Title');
+    };
     this.input.once(Phaser.Input.Events.POINTER_UP, start);
     this.input.keyboard?.once(Phaser.Input.Keyboard.Events.ANY_KEY_DOWN, start);
     this.input.gamepad?.once(Phaser.Input.Gamepad.Events.BUTTON_DOWN, start);
@@ -121,6 +134,66 @@ export class BootScene extends Phaser.Scene {
       c.lineWidth = 2;
       c.strokeStyle = '#fff6c2';
       c.stroke();
+    });
+
+    // Hero projectiles and select-screen icons (Buddy motifs).
+    this.canvas('heart', 32, 32, (c) => {
+      c.translate(16, 17);
+      heart(c, 13);
+      c.fillStyle = '#ff4fa6';
+      c.fill();
+      c.lineWidth = 2;
+      c.strokeStyle = '#ffffff';
+      c.stroke();
+    });
+    this.canvas('flower', 32, 32, (c) => {
+      c.translate(16, 16);
+      flower(c, 13, '#ff8fd0');
+    });
+    this.canvas('rainbow', 40, 32, (c) => {
+      c.translate(20, 20);
+      rainbow(c, 16);
+    });
+    ['#ff5fa2', '#ff9a2e', '#ffe23f', '#d23cff', '#3fa7ff'].forEach((col, i) =>
+      this.canvas(`ball-${i}`, 26, 26, (c) => {
+        c.beginPath();
+        c.arc(13, 13, 10.5, 0, Math.PI * 2);
+        c.fillStyle = col;
+        c.fill();
+        c.lineWidth = 2.5;
+        c.strokeStyle = '#ffffff';
+        c.stroke();
+        c.beginPath();
+        c.arc(9.5, 9, 3.2, 0, Math.PI * 2);
+        c.fillStyle = 'rgba(255,255,255,.75)';
+        c.fill();
+      }),
+    );
+    // Beam: horizontal rainbow bands with soft top and bottom edges; tiled along x.
+    this.canvas('beam', 64, 32, (c) => {
+      const band = 32 / RAINBOW.length;
+      RAINBOW.forEach((col, i) => {
+        c.fillStyle = col;
+        c.fillRect(0, i * band, 64, band + 0.5);
+      });
+      const g = c.createLinearGradient(0, 0, 0, 32);
+      g.addColorStop(0, 'rgba(255,255,255,0)');
+      g.addColorStop(0.5, 'rgba(255,255,255,.55)');
+      g.addColorStop(1, 'rgba(255,255,255,0)');
+      c.fillStyle = g;
+      c.fillRect(0, 0, 64, 32);
+      for (let x = 0; x < 64; x += 16) {
+        c.fillStyle = 'rgba(255,255,255,.35)';
+        c.fillRect(x, 0, 4, 32);
+      }
+      c.globalCompositeOperation = 'destination-in';
+      const edge = c.createLinearGradient(0, 0, 0, 32);
+      edge.addColorStop(0, 'rgba(0,0,0,0)');
+      edge.addColorStop(0.2, 'rgba(0,0,0,1)');
+      edge.addColorStop(0.8, 'rgba(0,0,0,1)');
+      edge.addColorStop(1, 'rgba(0,0,0,0)');
+      c.fillStyle = edge;
+      c.fillRect(0, 0, 64, 32);
     });
 
     this.glowBall('bullet', 20, '#ff2e9a', '#ffffff');

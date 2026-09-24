@@ -16,6 +16,11 @@ export class Bullet extends Phaser.GameObjects.Image {
   speed = 0;
   turnRate = 0;
   retargetTimer = 0;
+  /** Hero projectiles: movement mode, bounces left, squash on bounce, base scale. */
+  mode = 0;
+  bounces = 0;
+  squash = 0;
+  baseScale = 1;
   /** Burst-on-expiry state (drumstick missiles). */
   burstCount = 0;
   burstSpeed = 0;
@@ -38,6 +43,11 @@ export class Bullet extends Phaser.GameObjects.Image {
     this.gravity = 0;
     this.target = null;
     this.burstCount = 0;
+    this.mode = 0;
+    this.bounces = 0;
+    this.squash = 0;
+    this.baseScale = 1;
+    this.setScale(1);
     this.rotation = 0;
     this.setActive(true).setVisible(true);
     return this;

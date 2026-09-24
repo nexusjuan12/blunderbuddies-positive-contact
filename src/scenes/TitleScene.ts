@@ -4,7 +4,7 @@ import { TITLE } from '../data/title';
 import { canvasTexture } from '../systems/canvasTexture';
 import { cubicBezier, EASE, EASE_IN_OUT, EASE_OUT } from '../systems/easing';
 
-/** Panel crop + pop origin from tools/process_assets.py, all 0..1 of the art box. */
+/** Panel crop, pop origin and clip polygon from tools/process_assets.py, all 0..1 of the art box. */
 interface PanelMeta {
   x: number;
   y: number;
@@ -12,6 +12,13 @@ interface PanelMeta {
   h: number;
   originX: number;
   originY: number;
+  poly: [number, number][];
+}
+
+interface TitleLayout {
+  panels: Record<string, PanelMeta>;
+  /** Frame lines between panels, 0..1 of the art box. */
+  frame: [number, number][][];
 }
 
 export const TITLE_FONT = 'PerfectDark';
@@ -25,8 +32,8 @@ const ART_W = W * 0.75;
 const ART_LEFT = (W - ART_W) / 2;
 /** The art zooms around this point (fraction of the art box) while idle. */
 const ART_PIVOT_Y = 0.42;
-const SVG_W = 2304;
-const SVG_H = 1728;
+/** Width of the collage the frame line thickness was designed for. */
+const SVG_W = 2400;
 
 const COLORS = {
   void: 0x06051a,
@@ -100,6 +107,7 @@ export class TitleScene extends Phaser.Scene {
   private tap!: Phaser.GameObjects.Image;
   private particles: Particle[] = [];
   private sheenCanvas!: HTMLCanvasElement;
+  private layout!: TitleLayout;
 
   private ready = false;
   private starting = false;
@@ -110,6 +118,7 @@ export class TitleScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.cachedFrame = null;
     this.ready = false;
     this.starting = false;
     this.words = [];
@@ -124,7 +133,8 @@ export class TitleScene extends Phaser.Scene {
     this.setBgBrightness(0.1);
 
     this.art = this.add.container(ART_LEFT + ART_W / 2, H * ART_PIVOT_Y);
-    const meta = this.cache.json.get('title-panels') as Record<string, PanelMeta>;
+    this.layout = this.cache.json.get('title-panels') as TitleLayout;
+    const meta = this.layout.panels;
     for (const name of [...PANEL_ORDER, 'c']) {
       const m = meta[name];
       const image = this.add
@@ -345,18 +355,20 @@ export class TitleScene extends Phaser.Scene {
     this.animate(700, (t) => this.drawFramePaths(DRAW_EASE(t)));
   }
 
+  private get framePaths(): [number, number][][] {
+    if (!this.cachedFrame) {
+      this.cachedFrame = this.layout.frame.map((line) => line.map(([u, v]) => [this.artX(u), this.artY(v)] as [number, number]));
+    }
+    return this.cachedFrame;
+  }
+
+  private cachedFrame: [number, number][][] | null = null;
+
   /** The glowing frame lines between panels, drawn to `progress` of their length. */
   private drawFramePaths(progress: number): void {
     const g = this.frame;
     g.clear();
-    const p = (x: number, y: number): [number, number] => [this.artX(x / SVG_W), this.artY(y / SVG_H)];
-    const paths: [number, number][][] = [
-      [p(1152, 324), p(1783, 858), p(1152, 1641), p(505, 858), p(1152, 324)],
-      [p(1152, 324), p(1152, 0)],
-      [p(1152, 1641), p(1152, 1728)],
-      [p(505, 858), p(0, 858)],
-      [p(1783, 858), p(2304, 858)],
-    ];
+    const paths = this.framePaths;
     const stroke = 12 * (ART_W / SVG_W);
     const layers: [number, number, number][] = [
       [stroke + 18, 0x86e9ff, 0.18],

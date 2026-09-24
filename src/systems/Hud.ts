@@ -25,7 +25,7 @@ export class Hud {
   ) {
     for (let i = 0; i < maxLives; i++) {
       this.lifeIcons.push(
-        scene.add.image(26 + i * 40, 24, heroTexture, 0).setScale(0.1).setDepth(Depth.Hud),
+        scene.add.image(26 + i * 40, 24, heroTexture, 0).setScale(0.2).setDepth(Depth.Hud),
       );
     }
     for (let i = 0; i < hitsPerLife; i++) {

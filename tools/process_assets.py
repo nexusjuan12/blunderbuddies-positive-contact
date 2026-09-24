@@ -73,45 +73,134 @@ def sprites() -> None:
     save(fit(trim(load("sun.png")), 320), "sun.png")
 
 
-def hero_flight() -> None:
-    """Nuh-Uh's flight loop sheet (already at 2x) plus the super pose; hitbox centre goes in a JSON."""
-    print("hero flight")
+# Each Buddy: zip with the flight sheet + super pose, zip with the select-idle sheet, and voice clips.
+BUDDIES = {
+    "nuhuh": {"fly_zip": "files2.zip", "select_zip": "nuh-uh-select-idle.zip", "stem": "nuh_uh",
+              "voices": {"select": "nuh-uh-select.mp3", "damage": "nuh-uh-hurt.mp3", "recover": "nuh-uh-defiant.mp3"}},
+    "uhhuh": {"fly_zip": "uh-huh.zip", "select_zip": "uh-huh.zip", "stem": "uh_huh",
+              "voices": {"select": "uh-huh-select.mp3", "damage": "uh-huh-damage.mp3", "recover": "uh-huh-recover.mp3"}},
+    "oopsie": {"fly_zip": "oopsie.zip", "select_zip": "oopsie.zip", "stem": "oopsie",
+               "voices": {"select": "Oopsie-select.mp3", "damage": "Oopsie-damage.mp3", "recover": "oopsie-recover.mp3"}},
+    "whoopsie": {"fly_zip": "whoopsie-doodle.zip", "select_zip": "whoopsie-doodle.zip", "stem": "whoopsie_doodle",
+                 "voices": {"select": "whoopsie-doodle-select.mp3", "damage": "whoopsie-doodle-damage.wav",
+                            "recover": "Whoopsie-Doodle-recover.mp3"}},
+    "teehee": {"fly_zip": "tee-hee.zip", "select_zip": "tee-hee.zip", "stem": "tee_hee",
+               "voices": {"select": "Tee-Hee-select.mp3", "damage": "tee-hee-damage.wav", "recover": "tee-hee-recover.wav"}},
+}
+
+
+def rescale_sheet(sheet: Image.Image, fw: int, fh: int, frames: int, cols: int, scale: float) -> tuple[Image.Image, int, int]:
+    """Resize a sprite sheet frame by frame so the new frame size stays a whole number of pixels."""
+    nw, nh = round(fw * scale), round(fh * scale)
+    rows = (frames + cols - 1) // cols
+    out = Image.new("RGBA", (nw * cols, nh * rows), (0, 0, 0, 0))
+    for i in range(frames):
+        cx, cy = (i % cols) * fw, (i // cols) * fh
+        frame = sheet.crop((cx, cy, cx + fw, cy + fh)).resize((nw, nh), Image.LANCZOS)
+        out.paste(frame, ((i % cols) * nw, (i // cols) * nh))
+    return out, nw, nh
+
+
+def unzip(name: str) -> Path:
+    dst = TMP / Path(name).stem
+    with zipfile.ZipFile(SRC / name) as z:
+        z.extractall(dst)
+    return dst
+
+
+def encode_mp3(src: Path, dst: Path) -> None:
+    if src.suffix.lower() == ".mp3":
+        shutil.copyfile(src, dst)
+    else:
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(src), "-c:a", "libmp3lame", "-q:a", "2", str(dst)], check=True)
+
+
+def buddies(fly_scale: float = 0.5, select_scale: float = 0.85) -> None:
+    """Flight sheet (half size), super pose and select-idle sheet per Buddy, plus JSON metadata and voices."""
+    print("buddies")
     TMP.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(SRC / "files2.zip") as z:
-        z.extractall(TMP / "fly")
-    meta = json.loads((TMP / "fly" / "nuh_uh_fly_sheet.json").read_text())
-    save(load(TMP / "fly" / "nuh_uh_fly_sheet.png"), "hero-nuhuh-fly.png")
-    save(load(TMP / "fly" / "nuh_uh_super_pose.png"), "hero-nuhuh-super.png")
-    hx, hy = meta["hitbox_center"]
-    out = {
-        "frameWidth": meta["frameWidth"],
-        "frameHeight": meta["frameHeight"],
-        "frames": meta["frames"],
-        "fps": meta["fps"],
-        # Hitbox centre as a 0..1 origin, so the sprite position is the hitbox position.
-        "originX": hx / meta["frameWidth"],
-        "originY": hy / meta["frameHeight"],
-    }
-    (OUT / "hero-nuhuh-fly.json").write_text(json.dumps(out, indent=2) + "\n")
-    print("  hero-nuhuh-fly.json")
+    for bid, cfg in BUDDIES.items():
+        stem = cfg["stem"]
+        fly_dir = unzip(cfg["fly_zip"])
+        meta = json.loads((fly_dir / f"{stem}_fly_sheet.json").read_text())
+        sheet, fw, fh = rescale_sheet(load(fly_dir / f"{stem}_fly_sheet.png"), meta["frameWidth"], meta["frameHeight"],
+                                      meta["frames"], meta["columns"], fly_scale)
+        save(sheet, f"hero-{bid}-fly.png")
+        hx, hy = meta["hitbox_center"]
+        (OUT / f"hero-{bid}-fly.json").write_text(json.dumps({
+            "frameWidth": fw, "frameHeight": fh, "frames": meta["frames"], "fps": meta["fps"],
+            # Hitbox centre as a 0..1 origin, so the sprite position is the hitbox position.
+            "originX": hx / meta["frameWidth"], "originY": hy / meta["frameHeight"],
+        }, indent=2) + "\n")
+        save(load(fly_dir / f"{stem}_super_pose.png"), f"hero-{bid}-super.png")
+
+        sel_dir = unzip(cfg["select_zip"])
+        smeta = json.loads((sel_dir / f"{stem}_select_idle.json").read_text())[f"{stem}_select_idle_640.png"]
+        sheet, fw, fh = rescale_sheet(load(sel_dir / f"{stem}_select_idle_640.png"), smeta["frameWidth"], smeta["frameHeight"],
+                                      smeta["frames"], smeta["columns"], select_scale)
+        save(sheet, f"hero-{bid}-select.png")
+        (OUT / f"hero-{bid}-select.json").write_text(json.dumps({
+            "frameWidth": fw, "frameHeight": fh, "frames": smeta["frames"], "fps": smeta["fps"],
+            "feetY": smeta["feet_baseline_y"] / smeta["frameHeight"],
+        }, indent=2) + "\n")
+
+        for kind, name in cfg["voices"].items():
+            encode_mp3(SRC / name, OUT / f"voice-{bid}-{kind}.mp3")
+        print(f"  {bid}: json + voices")
+    shutil.rmtree(TMP)
+
+
+def spiderlons() -> None:
+    """Elon ground minion walk sheet (half size) and the Spiderlon boss idle sheet (for a later level)."""
+    print("spiderlons")
+    TMP.mkdir(parents=True, exist_ok=True)
+    d = unzip("elon-ground-minion.zip")
+    meta = json.loads((d / "spiderlon_walk_sheet.json").read_text())
+    scale = 0.5
+    sheet, fw, fh = rescale_sheet(load(d / "spiderlon_walk_sheet.png"), meta["frameWidth"], meta["frameHeight"],
+                                  meta["frames"], meta["columns"], scale)
+    save(sheet, "elon-walk.png")
+    hb = meta["hitbox"]
+    (OUT / "elon-walk.json").write_text(json.dumps({
+        "frameWidth": fw, "frameHeight": fh, "frames": meta["frames"], "fps": meta["fps"],
+        # Everything as 0..1 of the frame.
+        "feetY": meta["feet_baseline_y"] / meta["frameHeight"],
+        "hitbox": {"x": hb["x"] / meta["frameWidth"], "y": hb["y"] / meta["frameHeight"],
+                   "w": hb["w"] / meta["frameWidth"], "h": hb["h"] / meta["frameHeight"]},
+    }, indent=2) + "\n")
+
+    d = unzip("spiderlon-boss.zip")
+    meta = json.loads((d / "spiderlon_boss_idle_sheet.json").read_text())
+    shutil.copyfile(d / "spiderlon_boss_idle_sheet.png", OUT / "spiderlon-boss-idle.png")
+    (OUT / "spiderlon-boss-idle.json").write_text(json.dumps(meta, indent=2) + "\n")
+    print("  spiderlon-boss-idle.png + json")
     shutil.rmtree(TMP)
 
 
 # Title collage panels as clip polygons in % of the art box (from Jake's title-screen animation),
 # plus the point each panel "pops" around when it lights up.
+TITLE_ART = "tmpcq1n1jae.png"  # 2400x1792 collage (v2, Uh-Huh bottom-left)
 TITLE_PANELS = {
-    "tl": ([(0, 0), (50, 0), (50, 18.75), (21.92, 49.65), (0, 49.65)], (22, 22)),
-    "tr": ([(50, 0), (100, 0), (100, 49.65), (77.39, 49.65), (50, 18.75)], (78, 22)),
-    "bl": ([(0, 49.65), (21.92, 49.65), (50, 94.97), (50, 100), (0, 100)], (22, 76)),
-    "br": ([(100, 49.65), (77.39, 49.65), (50, 94.97), (50, 100), (100, 100)], (78, 76)),
-    "c": ([(50, 18.75), (77.39, 49.65), (50, 94.97), (21.92, 49.65)], (50, 55)),
+    "tl": ([(0, 0), (50, 0), (50, 18.64), (21.92, 49.65), (0, 49.65)], (22, 22)),
+    "tr": ([(50, 0), (100, 0), (100, 49.65), (77.39, 49.65), (50, 18.64)], (78, 22)),
+    "bl": ([(0, 49.65), (21.92, 49.65), (50, 95.20), (50, 100), (0, 100)], (22, 76)),
+    "br": ([(100, 49.65), (77.39, 49.65), (50, 95.20), (50, 100), (100, 100)], (78, 76)),
+    "c": ([(50, 18.64), (77.39, 49.65), (50, 95.20), (21.92, 49.65)], (50, 55)),
 }
+# Glowing frame lines between the panels, in the collage's 2400x1792 pixel space.
+TITLE_FRAME = [
+    [(1200, 334), (1857, 890), (1200, 1706), (526, 890), (1200, 334)],
+    [(1200, 334), (1200, 0)],
+    [(1200, 1706), (1200, 1792)],
+    [(526, 890), (0, 890)],
+    [(1857, 890), (2400, 890)],
+]
 
 
 def title() -> None:
     """Cut the title collage into its five panels, make the blurred backdrop, copy font + music."""
     print("title")
-    art = load("title-screen.png")
+    art = load(TITLE_ART)
     art = art.resize((1440, 1080), Image.LANCZOS)  # 2x the 720x540 art box
     aw, ah = art.size
     ss = 4  # supersample the masks for smooth diagonal edges
@@ -133,14 +222,17 @@ def title() -> None:
             "h": (box[3] - box[1]) / ah,
             "originX": origin[0] / 100,
             "originY": origin[1] / 100,
+            # Clip polygon, 0..1 of the art box (used for tap hit-testing).
+            "poly": [(x / 100, y / 100) for x, y in poly],
         }
-    (OUT / "title-panels.json").write_text(json.dumps(meta, indent=2) + "\n")
+    frame = [[(x / 2400, y / 1792) for x, y in line] for line in TITLE_FRAME]
+    (OUT / "title-panels.json").write_text(json.dumps({"panels": meta, "frame": frame}, indent=2) + "\n")
     print("  title-panels.json")
 
     # Backdrop: covers the stage 8% past each edge, blurred and a little more saturated.
     # Stored at half size; it's drawn at 2x (blur hides the resolution).
     bw, bh = round(960 * 1.16 / 2), round(540 * 1.16 / 2)
-    src = load("title-screen.png").convert("RGB")
+    src = load(TITLE_ART).convert("RGB")
     scale = max(bw / src.width, bh / src.height)
     src = src.resize((round(src.width * scale), round(src.height * scale)), Image.LANCZOS)
     left, top = (src.width - bw) // 2, (src.height - bh) // 2
@@ -205,9 +297,6 @@ def audio() -> None:
         dst = OUT / f"music-happy-hills.{ext}"
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(wav), *args, str(dst)], check=True)
         print(f"  {dst.name}")
-    for clip in ("hurt", "defiant"):
-        shutil.copyfile(SRC / f"nuh-uh-{clip}.mp3", OUT / f"voice-nuhuh-{clip}.mp3")
-        print(f"  voice-nuhuh-{clip}.mp3")
     shutil.copyfile(SRC / "uh-uh-no-buddies-no-win.mp3", OUT / "voice-uhuhno-defeat.mp3")
     print("  voice-uhuhno-defeat.mp3")
     dst = OUT / "voice-uhuhno-taunt.mp3"
@@ -218,7 +307,8 @@ def audio() -> None:
 if __name__ == "__main__":
     OUT.mkdir(parents=True, exist_ok=True)
     sprites()
-    hero_flight()
+    buddies()
+    spiderlons()
     title()
     backgrounds()
     mecha_turkey()
