@@ -1,0 +1,38 @@
+{
+  "drawOrder": [
+    "leg_back",
+    "leg_front",
+    "head",
+    "body"
+  ],
+  "parts": {
+    "leg_back": {
+      "key": "turkey-leg-back",
+      "originX": 0.753968253968254,
+      "originY": 0.16033755274261605,
+      "x": 103.5,
+      "y": 172.5
+    },
+    "leg_front": {
+      "key": "turkey-leg-front",
+      "originX": 0.6989795918367347,
+      "originY": 0.021052631578947368,
+      "x": 0.0,
+      "y": 168.75
+    },
+    "head": {
+      "key": "turkey-head",
+      "originX": 0.9301075268817204,
+      "originY": 0.7935779816513762,
+      "x": -109.5,
+      "y": 75.0
+    },
+    "body": {
+      "key": "turkey-body",
+      "originX": 0.3186646433990895,
+      "originY": 0.7860326894502229,
+      "x": 32.25,
+      "y": 75.0
+    }
+  }
+}
