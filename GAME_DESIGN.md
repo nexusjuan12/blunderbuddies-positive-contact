@@ -19,16 +19,28 @@ An absurd, over-the-top side-scrolling shmup / cute 'em up in the spirit of Cho 
 
 ## Heroes
 
-The player picks one Buddy. Heroes fly through levels **Superman-style**, rather than piloting ships.
+The player picks one of five Buddies on the Buddy select screen. Heroes fly through levels **Superman-style**, rather than piloting ships.
 
 | Buddy | Main shot | Feel |
 |---|---|---|
 | Uh-Huh | Hearts: wide spread | Crowd clearing, weaker per hit |
 | Nuh-Uh | Stars: homing | Forgiving, good for newer players |
+| Oopsie | Rubber balls in his costume colours, fired alternately up and down, bouncing 2–3 times off the top and bottom of the screen with a squash on each bounce | The tricky shot: hits things you're not lined up with |
 | Whoopsie-Doodle | Flowers: petals orbit the hero and absorb bullets, then bloom outward as a shockwave | Defensive, rhythmic |
 | Tee-Hee | Rainbow beam: continuous piercing laser | High damage, narrow, rewards aim |
 
-**Super (all heroes): Positive Vibes Wave.** A screen-filling burst that damages everything on screen and converts every enemy bullet into floating hearts. Limited stock, refilled by pickups.
+**Super (all heroes): Positive Vibes Wave.** A screen-filling burst that damages everything on screen and converts every enemy bullet into floating hearts. The hero swaps to the super pose while it fires. Limited stock (starts at 1), refilled by pickups and by forming the full team.
+
+### Buddy select
+
+The title screen doubles as the Buddy select. The collage panels are: Oopsie top-left, Whoopsie-Doodle top-right, Uh-Huh bottom-left, Tee-Hee bottom-right, Nuh-Uh centre.
+
+1. The intro plays (narrator, roll call, logo slam). Tapping during the intro skips to the end state and never selects anything.
+2. The prompt reads "Choose your Buddy".
+3. First tap on a panel highlights it: the other panels dim, the chosen panel glows, the name and attack icon appear in the bottom prompt slot, and that Buddy's select voice clip plays. Tapping a different panel moves the highlight.
+4. Second tap on the same panel confirms: the standing idle zooms to fill the screen, then the level starts.
+
+After a stage clear or game over, the results screen offers "Play again" (same Buddy) or "Choose Buddy".
 
 ### Flight
 
@@ -37,18 +49,20 @@ The player picks one Buddy. Heroes fly through levels **Superman-style**, rather
 - A separate spread-eagle super pose swaps in for the Positive Vibes Wave.
 - The hitbox is a small fixed circle at the hero's chest (from the sheet's JSON) and never rotates. It is shown as a glowing dot when the player is focusing or moving slowly.
 
-### Companions (stacking auto-defenders)
+### Companions (the team power-up)
 
-- A companion power-up summons a mini version of one of the other Buddies, who flies alongside the hero and auto-fires a small version of their own attack.
-- Companions stack up to 3, so a fully powered hero has the other three Buddies with them.
-- Collecting a companion power-up at full stack upgrades the existing companions' fire rate instead.
-- Taking a hit knocks off one companion before the hero loses a life. Companions spin too.
-- Companion formation trails behind the hero with a short delay (Gradius-style follow), so movement leaves a satisfying snake of Buddies.
+- The team power-up adds a random Buddy as a mini companion: never the one you're playing, never one already on the team. Up to four companions, so the full team is all five Buddies. With the team full, further pickups boost everyone's fire rate instead.
+- Companions are drawn at about 60% scale, behind the hero, each starting their flight animation on a different frame so capes and bobs don't move in lockstep.
+- **Trail while moving:** each companion follows the path the hero took a moment ago (Gradius options), about 10 frames further back per companion, so the team snakes after you and skilled players can aim the tail.
+- **V formation when still:** after about half a second of holding still, companions glide into a wedge behind and to either side, then peel back into the trail on the next move, with a smooth ease between the two.
+- **Firing:** each companion auto-fires a weaker version of their own attack, so a full team is a mix of hearts, stars, balls, flowers and rainbows.
+- **Getting hit:** companions have no hitbox. When the hero is hit, the last companion in line is knocked off with a spin and tumbles off screen, before the shield or lives are touched.
+- **Full-team payoff:** when the fifth Buddy joins, a "team formed" moment: a flash, a brief invincibility window and a free Positive Vibes Wave.
 
 ## Power-ups
 
 - **Vibe level:** strengthens the main shot (3 levels).
-- **Companion:** adds a mini Buddy (see above).
+- **Team:** adds a random Buddy companion (see above). Dropped by glowing carrier enemies placed in each level's wave data.
 - **Super stock:** +1 Positive Vibes Wave.
 - Pickups drop as hearts, stars, flowers, and rainbow shards.
 

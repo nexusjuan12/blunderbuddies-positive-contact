@@ -11,9 +11,7 @@ Grouped by milestone, in `GAME_DESIGN.md` order. Tick items off as they land.
 - [x] Mecha-turkey boss: 3 phases, Mr. Uh-Uh-No taunt/defeat voice
 - [x] Touch (relative drag), keyboard and gamepad controls
 - [x] Title screen (Jake's animation, Perfect Dark font, title music)
-- [ ] **Elons** (Spiderlon's minions) as ground enemies in Happy Hills. *Waiting on art* (walk/idle image(s)).
-      Behaviour: walker + lobber. They walk along the ground, pause and lob aimed shots up at the hero.
-      Add as a new `ground` behaviour in `src/data/enemies.ts` (ground line around y = 470).
+- [x] **Elons** (Spiderlon's minions): ground walker + lobber in Happy Hills
 - [ ] Android APK: install Android Studio, `npx cap add android`, lock landscape, `./gradlew assembleDebug`, test on a phone at 60 fps
 - [ ] On-device touch tuning (drag sensitivity, hero size)
 - [ ] Pack sprites into texture atlases
@@ -21,29 +19,26 @@ Grouped by milestone, in `GAME_DESIGN.md` order. Tick items off as they land.
 - [ ] Logo: choose Perfect Dark extender style (A plain / B `BLUND@ER` / C `BLUND$ER`)
 - [ ] Tuning pass: enemy HP, boss HP (650), wave density
 
-## Milestone 2: all four heroes
+## Milestone 2: all five heroes
 
-- [ ] Flight sheet + super pose + voice clips for **Uh-Huh**, **Whoopsie-Doodle**, **Tee-Hee** (same format as Nuh-Uh's `files2.zip`)
-- [ ] Shots: Uh-Huh hearts (wide spread), Whoopsie-Doodle flowers (orbit, absorb, bloom), Tee-Hee rainbow beam
-- [ ] Positive Vibes Wave (super): on-screen Super button, X/Space, gamepad face button; super pose swap
-- [ ] Hero select screen
+- [x] Flight sheets, super poses, select idles and voices for all five Buddies
+- [x] Shots: hearts spread, homing stars, bouncing balls, orbiting flowers, rainbow beam (placeholder projectile art)
+- [x] Positive Vibes Wave: on-screen button, X/Space, gamepad face buttons; super pose swap
+- [x] Buddy select (title screen) and results screen with Play again / Choose Buddy
+- [ ] Tuning pass on the five weapons (roughly equal DPS; Oopsie and Whoopsie-Doodle weaker vs the boss)
 
 ## Milestone 3: companions and power-ups
 
-- [ ] **Decide the power-ups** (open questions):
-  - Where pickups come from: carrier enemies, timed drops, or random drops?
-  - How pickups move (float, drift, bounce off edges?)
-  - What each vibe level changes per hero
-  - Confirm the companion rules from the design doc (stack to 3, then fire-rate upgrade; a hit knocks one off)
-- [ ] Power-up pickups: hearts, stars, flowers, rainbow shards
-- [ ] Companions: mini Buddies with Gradius-style trailing follow
+- [x] Team power-up from carrier enemies; companions with snake trail / V formation, weaker fire, hit absorption, full-team payoff
+- [ ] Vibe level power-up (what each level changes per hero) and super-stock pickups
+- [ ] Pickup art (team orb is a placeholder)
 
 ## Milestone 4: remaining levels and bosses
 
 - [ ] Level 1: Blunderbuddies Dome + mini-boss (TBD)
 - [ ] Level 3: Snow Day + Agent Ice bulldozer tank
 - [ ] Level 4: Villain Dome + boss (TBD)
-- [ ] Level 5: Space + giant Spiderlons (befriended ending)
+- [ ] Level 5: Space + giant Spiderlons (befriended ending). Spiderlon boss idle sheet is already processed (`spiderlon-boss-idle`).
 
 ## Milestone 5: polish
 

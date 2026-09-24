@@ -21,13 +21,13 @@ Check the installed Phaser version in `package.json` before using an API, and do
 - `npx cap sync android` – copy the web build into the Android project (`npm run cap:sync` builds first)
 - APK build: via Android Studio or `./gradlew assembleDebug` in `android/` (needs JDK 21 + Android SDK; `android/` not added yet)
 
-Debug URL flags: `?fps` (FPS counter), `?boss` (skip to boss), `?hitboxes` (draw collision circles), `?god` (no damage).
+Debug URL flags: `?fps` (FPS counter), `?boss` (skip to boss), `?hitboxes` (draw collision circles), `?god` (no damage), `?hero=<nuhuh|uhhuh|oopsie|whoopsie|teehee>` (skip the title), `?team=N` (start with N companions), `?debug` (exposes `window.game` for automated tests).
 
 ## Universe rules (important)
 
 - Buddies are Teletubbies-inspired: simple-minded, befuddling, toddler-like in behavior.
 - **Buddies never speak real words.** They communicate only through intonations of their own names. Never write dialogue for them. Any on-screen text is UI, not character speech.
-- Heroes: **Uh-Huh** (hearts, spread), **Nuh-Uh** (stars, homing), **Whoopsie-Doodle** (flowers, orbiting shield/burst), **Tee-Hee** (rainbow beam).
+- Heroes (five, all playable): **Uh-Huh** (hearts, spread), **Nuh-Uh** (stars, homing), **Oopsie** (bouncing rubber balls), **Whoopsie-Doodle** (flowers, orbiting shield/burst), **Tee-Hee** (rainbow beam).
 - Heroes wear tokusatsu / Voltron-style helmets and capes and fly **Superman-style**, not in ships, with a fast fake horizontal spin on hits and power-ups.
 - Hero motifs: hearts, stars, rainbows, flowers, positive-vibes beams.
 - **Avoid** literal toddler props: no sippy cups, pacifiers, bottles, diapers.
