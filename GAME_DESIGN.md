@@ -29,7 +29,7 @@ The player picks one of five Buddies on the Buddy select screen. Heroes fly thro
 | Whoopsie-Doodle | Flowers: petals orbit the hero and absorb bullets, then bloom outward as a shockwave | Defensive, rhythmic |
 | Tee-Hee | Rainbow beam: continuous piercing laser | High damage, narrow, rewards aim |
 
-**Super (all heroes): Positive Vibes Wave.** A screen-filling burst that damages everything on screen and converts every enemy bullet into floating hearts. The hero swaps to the super pose while it fires. Limited stock (starts at 1), refilled by pickups and by forming the full team.
+**Super (all heroes): Positive Vibes Wave.** A screen-filling burst that damages everything on screen and converts every enemy bullet into floating hearts. The hero swaps to the super pose while it fires. Limited stock (starts at 1, up to 3). A vibes meter fills mostly from destroying enemies and damaging the boss, plus a slow passive trickle; each full meter adds one Wave. Forming the full team also fires a free Wave.
 
 ### Buddy select
 

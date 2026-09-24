@@ -2,6 +2,14 @@
 export const SUPER_WAVE = {
   startStock: 1,
   maxStock: 3,
+  /** Vibes meter: when it fills, +1 Wave (up to maxStock). */
+  meterMax: 100,
+  /** Meter gained per point of an enemy's score value (flyer 100 -> 6, turret 300 -> 18). */
+  meterPerScore: 0.06,
+  /** Meter gained per point of damage dealt to the boss. */
+  meterPerBossDamage: 0.25,
+  /** Slow passive fill per second, so a struggling player still earns one eventually. */
+  meterTrickle: 1.2,
   /** Damage dealt to every enemy on screen. */
   enemyDamage: 60,
   /** Damage dealt to the boss (if it can be hurt at that moment). */

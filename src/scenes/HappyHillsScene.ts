@@ -82,6 +82,8 @@ export class HappyHillsScene extends Phaser.Scene {
   private scoreDirty = false;
   private lastHeroState: HeroState = 'entering';
   private superStock = 0;
+  private superMeter = 0;
+  private lastBossHp = 0;
 
   constructor() {
     super('HappyHills');
@@ -111,6 +113,9 @@ export class HappyHillsScene extends Phaser.Scene {
     this.boss = new MechaTurkey(this, MECHA_TURKEY, rig, this.enemyShots, this.effects, {
       onDamaged: (f) => {
         this.hud.setBossHp(f);
+        const hp = f * MECHA_TURKEY.hp;
+        this.addMeter((this.lastBossHp - hp) * SUPER_WAVE.meterPerBossDamage);
+        this.lastBossHp = hp;
         this.addScore(MECHA_TURKEY.scorePerHit);
       },
       onPhaseChange: (i) => {
@@ -141,6 +146,8 @@ export class HappyHillsScene extends Phaser.Scene {
     this.controls = new InputController(this);
     this.controls.superButton = SUPER_WAVE.button;
     this.superStock = SUPER_WAVE.startStock;
+    this.superMeter = 0;
+    this.lastBossHp = MECHA_TURKEY.hp;
     this.voices = new VoiceBank(this);
     this.villainVoices = new VoiceBank(this, 1);
 
@@ -194,6 +201,7 @@ export class HappyHillsScene extends Phaser.Scene {
     }
     this.lastHeroState = hero.state;
     if (this.controls.superPressed) this.tryFireSuper();
+    if (hero.state === 'alive' && this.phase !== 'clear' && this.phase !== 'over') this.addMeter(SUPER_WAVE.meterTrickle * dt);
 
     const firing = hero.firing && this.phase !== 'clear';
     this.weapon.update(dt, firing, hero.x, hero.y);
@@ -343,10 +351,32 @@ export class HappyHillsScene extends Phaser.Scene {
     this.hud.setLives(hero.lives, hero.hitsLeft);
   }
 
+  /** Fill the vibes meter; each time it fills, +1 Wave (while below max stock). */
+  private addMeter(amount: number): void {
+    if (amount <= 0) return;
+    const max = SUPER_WAVE.meterMax;
+    if (this.superStock >= SUPER_WAVE.maxStock) {
+      this.superMeter = max;
+    } else {
+      this.superMeter += amount;
+      while (this.superMeter >= max && this.superStock < SUPER_WAVE.maxStock) {
+        this.superMeter -= max;
+        this.superStock++;
+        this.hud.setSuper(this.superStock);
+        this.effects.pop(SUPER_WAVE.button.x, SUPER_WAVE.button.y, 1.6, 0xffe14d, 0.4);
+      }
+      if (this.superStock >= SUPER_WAVE.maxStock) this.superMeter = max;
+    }
+    this.hud.setMeter(this.superMeter / max);
+  }
+
   private tryFireSuper(): void {
     if (this.superStock <= 0 || this.hero.state !== 'alive' || this.phase === 'clear' || this.phase === 'over') return;
     this.superStock--;
     this.hud.setSuper(this.superStock);
+    // Dropping below max restarts the meter if it was parked full.
+    if (this.superMeter >= SUPER_WAVE.meterMax) this.superMeter = 0;
+    this.hud.setMeter(this.superMeter / SUPER_WAVE.meterMax);
     this.fireSuperWave();
   }
 
@@ -416,7 +446,10 @@ export class HappyHillsScene extends Phaser.Scene {
   private readonly onEnemyKilled = (e: Enemy): void => {
     this.effects.explode(e.x, e.y, e.radius / 30);
     if (e.carrier) this.pickups.obtain()?.spawn(e.x, e.y);
-    if (e.def) this.addScore(e.def.score);
+    if (e.def) {
+      this.addScore(e.def.score);
+      this.addMeter(e.def.score * SUPER_WAVE.meterPerScore);
+    }
   };
 
   private onBossDefeated(): void {

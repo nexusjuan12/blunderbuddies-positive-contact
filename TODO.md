@@ -24,6 +24,7 @@ Grouped by milestone, in `GAME_DESIGN.md` order. Tick items off as they land.
 - [x] Flight sheets, super poses, select idles and voices for all five Buddies
 - [x] Shots: hearts spread, homing stars, bouncing balls, orbiting flowers, rainbow beam (placeholder projectile art)
 - [x] Positive Vibes Wave: on-screen button, X/Space, gamepad face buttons; super pose swap
+- [x] Vibes meter: fills from kills, boss damage and a slow trickle; +1 Wave per fill (max 3)
 - [x] Buddy select (title screen) and results screen with Play again / Choose Buddy
 - [ ] Tuning pass on the five weapons (roughly equal DPS; Oopsie and Whoopsie-Doodle weaker vs the boss)
 

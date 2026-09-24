@@ -18,6 +18,9 @@ export class Hud {
   private readonly fpsText: Phaser.GameObjects.Text | null;
   private readonly superIcons: Phaser.GameObjects.Image[] = [];
   private readonly superButton: Phaser.GameObjects.Image;
+  private readonly meterFill: Phaser.GameObjects.Rectangle;
+  private readonly buttonRing: Phaser.GameObjects.Graphics;
+  private meterShown = -1;
   private fpsTimer = 0;
 
   constructor(
@@ -38,6 +41,11 @@ export class Hud {
     for (let i = 0; i < SUPER_WAVE.maxStock; i++) {
       this.superIcons.push(scene.add.image(20 + i * 22, 72, 'heart').setScale(0.55).setDepth(Depth.Hud));
     }
+    const mw = SUPER_WAVE.maxStock * 22;
+    scene.add.rectangle(10, 86, mw, 6, 0x2a1030, 0.8).setOrigin(0, 0.5).setDepth(Depth.Hud);
+    this.meterFill = scene.add.rectangle(10, 86, mw, 6, 0xff4fa6).setOrigin(0, 0.5).setDepth(Depth.Hud);
+    this.meterFill.scaleX = 0;
+    this.buttonRing = scene.add.graphics().setDepth(Depth.Hud);
     const b = SUPER_WAVE.button;
     this.superButton = scene.add.image(b.x, b.y, 'super-button').setDepth(Depth.Hud).setDisplaySize(b.radius * 2, b.radius * 2);
 
@@ -73,6 +81,22 @@ export class Hud {
   setSuper(stock: number): void {
     for (let i = 0; i < this.superIcons.length; i++) this.superIcons[i].setVisible(i < stock);
     this.superButton.setAlpha(stock > 0 ? 0.9 : 0.35);
+  }
+
+  /** Vibes meter, 0..1: bar under the stock hearts and a ring around the touch button. */
+  setMeter(fraction: number): void {
+    // Only redraw when it has visibly changed.
+    const f = Math.round(fraction * 100) / 100;
+    if (f === this.meterShown) return;
+    this.meterShown = f;
+    this.meterFill.scaleX = f;
+    const b = SUPER_WAVE.button;
+    const g = this.buttonRing;
+    g.clear();
+    g.lineStyle(5, 0xffe14d, 0.95);
+    g.beginPath();
+    g.arc(b.x, b.y, b.radius + 4, -Math.PI / 2, -Math.PI / 2 + f * Math.PI * 2);
+    g.strokePath();
   }
 
   setScore(score: number): void {
