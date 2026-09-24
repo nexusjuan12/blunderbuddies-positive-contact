@@ -157,7 +157,8 @@ export class TitleScene extends Phaser.Scene {
     this.glow = null;
     this.lookTween = null;
     this.nameIcons = [];
-    this.voices = new VoiceBank(this, 1, 0.25);
+    // No cooldown and cut-off: each highlight plays that Buddy's clip right away.
+    this.voices = new VoiceBank(this, 1, 0, true);
     this.words = [];
     this.particles = [];
     this.panels = {};
@@ -956,6 +957,7 @@ export class TitleScene extends Phaser.Scene {
   override update(time: number, deltaMs: number): void {
     // Pulse the highlighted panel's glow.
     if (this.glow) this.glow.outerStrength = 5 + 3 * Math.sin(time / 160);
+    this.voices.update(deltaMs / 1000);
 
     // The original stepped once per 60 fps frame; scale by elapsed frames.
     const f = Math.min(deltaMs, 50) / (1000 / 60);
