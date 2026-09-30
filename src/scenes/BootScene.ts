@@ -3,6 +3,7 @@ import { Debug, GAME_HEIGHT, GAME_WIDTH } from '../config';
 import { HERO_IDS, HEROES, isHeroId } from '../data/heroes';
 import { TITLE } from '../data/title';
 import type { FlySheetMeta } from '../entities/Hero';
+import type { BunnyMeta } from '../entities/RoboBunny';
 import { canvasTexture } from '../systems/canvasTexture';
 import { flower, heart, RAINBOW, rainbow } from '../systems/shapes';
 import { pillTexture, TITLE_FONT, UI_K } from '../systems/uiText';
@@ -39,6 +40,16 @@ export class BootScene extends Phaser.Scene {
       }
     }
     for (const key of LOOP_SHEETS) this.loadSheet(key);
+
+    // Robo bunny (two sheets share one JSON), its eggs, and the escape-pod rider stand-in.
+    this.load.json('bunny', `${P}bunny.json`);
+    this.load.once('filecomplete-json-bunny', (_key: string, _type: string, meta: BunnyMeta) => {
+      for (const name of ['walk', 'throw'] as const) {
+        this.load.spritesheet(`bunny-${name}`, `${P}bunny-${name}.png`, { frameWidth: meta[name].frameWidth, frameHeight: meta[name].frameHeight });
+      }
+    });
+    this.loadSheet('eggs');
+    this.load.image('uhuhno-rider', `${P}uhuhno-rider.png`);
     this.load.image('sun', `${P}sun.png`);
     this.load.image('hh-sky', `${P}hh-sky.png`);
     this.load.image('hh-far', `${P}hh-far.png`);
@@ -93,6 +104,20 @@ export class BootScene extends Phaser.Scene {
         repeat: -1,
       });
     }
+
+    const bunny = this.cache.json.get('bunny') as BunnyMeta;
+    this.anims.create({
+      key: 'bunny-walk',
+      frames: this.anims.generateFrameNumbers('bunny-walk', { start: 0, end: bunny.walk.frames - 1 }),
+      frameRate: bunny.walk.fps,
+      repeat: -1,
+    });
+    this.anims.create({
+      key: 'bunny-throw',
+      frames: this.anims.generateFrameNumbers('bunny-throw', { start: 0, end: bunny.throw.frames - 1 }),
+      frameRate: bunny.throw.fps,
+      repeat: 0,
+    });
 
     this.showGate();
   }

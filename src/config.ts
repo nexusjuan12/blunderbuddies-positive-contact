@@ -20,6 +20,8 @@ const params = new URLSearchParams(window.location.search);
 export const Debug = {
   showFps: params.has('fps'),
   skipToBoss: params.has('boss'),
+  /** Jump to the robo bunny's arrival (mid-level). */
+  skipToBunny: params.has('bunny'),
   showHitboxes: params.has('hitboxes'),
   invincible: params.has('god'),
   /** Expose the Phaser game as `window.game` for automated testing. */

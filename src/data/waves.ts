@@ -18,6 +18,8 @@ export interface WaveDef {
 
 export interface LevelDef {
   waves: readonly WaveDef[];
+  /** Mid-level tank (robo bunny): arrives at this time and stays until destroyed; waves keep coming. */
+  midBoss: { at: number };
   /** Seconds of quiet after the last spawn before the boss warning. */
   bossDelay: number;
   /** Length of the boss warning banner. */
@@ -25,6 +27,7 @@ export interface LevelDef {
 }
 
 export const HAPPY_HILLS: LevelDef = {
+  midBoss: { at: 40 },
   bossDelay: 3,
   warningTime: 3,
   waves: [

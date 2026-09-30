@@ -124,3 +124,51 @@ export const MECHA_TURKEY: BossDef = {
     defeat: ['voice-uhuhno-defeat'],
   },
 };
+
+/** Robo Easter bunny: a mid-level tank that paces the ground and lobs spinning eggs, Hammer Bros style. */
+export interface MidBossDef {
+  hp: number;
+  /** On-screen height of a frame, px. */
+  displayHeight: number;
+  score: number;
+  /** Feet line, px from the top of the screen. */
+  groundY: number;
+  enterSpeed: number;
+  /** It paces between these x positions. */
+  rangeX: readonly [number, number];
+  advanceSpeed: number;
+  recedeSpeed: number;
+  /** Seconds between throws. */
+  throwInterval: readonly [number, number];
+  eggsPerThrow: readonly [number, number];
+  egg: {
+    /** Launch speeds: left and up, in random ranges, so the arcs overlap chaotically. */
+    speedX: readonly [number, number];
+    speedY: readonly [number, number];
+    gravity: number;
+    /** Spin, radians/s (random sign). */
+    spin: readonly [number, number];
+  };
+  /** Vibes meter gained per point of damage dealt to it. */
+  meterPerDamage: number;
+}
+
+export const ROBO_BUNNY: MidBossDef = {
+  hp: 260,
+  displayHeight: 215,
+  score: 3000,
+  groundY: 512,
+  enterSpeed: 150,
+  rangeX: [560, 850],
+  advanceSpeed: 70,
+  recedeSpeed: 55,
+  throwInterval: [0.9, 1.7],
+  eggsPerThrow: [1, 3],
+  egg: {
+    speedX: [-430, -110],
+    speedY: [-560, -330],
+    gravity: 640,
+    spin: [5, 12],
+  },
+  meterPerDamage: 0.2,
+};

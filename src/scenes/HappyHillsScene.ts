@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { Debug, Depth, GAME_HEIGHT, GAME_WIDTH } from '../config';
-import { MECHA_TURKEY } from '../data/bosses';
+import { MECHA_TURKEY, ROBO_BUNNY } from '../data/bosses';
 import { ENEMIES } from '../data/enemies';
 import { HERO_IDS, HEROES, isHeroId, type HeroId, type HeroStats } from '../data/heroes';
 import { SUPER_WAVE } from '../data/superWave';
@@ -9,6 +9,7 @@ import { HAPPY_HILLS, type WaveDef } from '../data/waves';
 import { Enemy, type EnemyContext } from '../entities/Enemy';
 import { Hero, type HeroState } from '../entities/Hero';
 import { MechaTurkey, type Rig } from '../entities/MechaTurkey';
+import { RoboBunny, type BunnyMeta } from '../entities/RoboBunny';
 import { TeamPickup } from '../entities/TeamPickup';
 import type { Target } from '../entities/Target';
 import { Effects } from '../systems/Effects';
@@ -60,6 +61,7 @@ export class HappyHillsScene extends Phaser.Scene {
   private enemyShots!: EnemyShots;
   private enemies!: Pool<Enemy>;
   private boss!: MechaTurkey;
+  private bunny!: RoboBunny;
   private effects!: Effects;
   private hud!: Hud;
   private voices!: VoiceBank;
@@ -81,6 +83,8 @@ export class HappyHillsScene extends Phaser.Scene {
   private score = 0;
   private scoreDirty = false;
   private lastHeroState: HeroState = 'entering';
+  /** True once the mid-level bunny has been sent in (or skipped). */
+  private bunnyDone = false;
   private superStock = 0;
   private superMeter = 0;
   private lastBossHp = 0;
@@ -96,6 +100,7 @@ export class HappyHillsScene extends Phaser.Scene {
   create(): void {
     const stats = this.stats;
     this.levelTime = 0;
+    this.bunnyDone = false;
     this.phase = 'waves';
     this.phaseTime = 0;
     this.score = 0;
@@ -128,7 +133,22 @@ export class HappyHillsScene extends Phaser.Scene {
       onDefeated: () => this.onBossDefeated(),
     });
 
-    const targets: Target[] = [...this.enemies.items, ...this.boss.hurtboxes];
+    const eggs = this.cache.json.get('eggs') as { radius: number };
+    this.bunny = new RoboBunny(this, ROBO_BUNNY, this.cache.json.get('bunny') as BunnyMeta, eggs.radius * 0.85, this.enemyShots, this.effects, {
+      onDamaged: (f, damage) => {
+        this.hud.setBossHp(f);
+        this.addMeter(damage * ROBO_BUNNY.meterPerDamage);
+      },
+      onDefeated: (x, y) => {
+        this.hud.showBossBar(false);
+        this.addScore(ROBO_BUNNY.score);
+        this.cameras.main.shake(300, 0.01);
+        // A tank that tough always drops a team pickup.
+        this.pickups.obtain()?.spawn(x, y - 40);
+      },
+    });
+
+    const targets: Target[] = [...this.enemies.items, ...this.bunny.hurtboxes, ...this.boss.hurtboxes];
     this.projectiles = new HeroProjectiles(this, targets, (x, y) => this.effects.sparks(x, y, 2, 0xffe680, 90), 420);
     const ctx: WeaponContext = { scene: this, projectiles: this.projectiles, enemyShots: this.enemyShots, effects: this.effects };
     this.weapon = createWeapon(stats.weapon, ctx);
@@ -163,7 +183,13 @@ export class HappyHillsScene extends Phaser.Scene {
       this.sound.play('music-happy-hills', { loop: true, volume: 0.55 });
     }
 
+    if (Debug.skipToBunny) {
+      while (this.spawnIndex < this.spawns.length && this.spawns[this.spawnIndex].at < HAPPY_HILLS.midBoss.at - 1) this.spawnIndex++;
+      this.levelTime = HAPPY_HILLS.midBoss.at - 1;
+      this.dome.setVisible(false);
+    }
     if (Debug.skipToBoss) {
+      this.bunnyDone = true;
       this.spawnIndex = this.spawns.length;
       this.levelTime = this.spawns.length ? this.spawns[this.spawns.length - 1].at : 0;
       this.dome.setVisible(false);
@@ -215,6 +241,7 @@ export class HappyHillsScene extends Phaser.Scene {
     const enemies = this.enemies.items;
     for (let i = 0; i < enemies.length; i++) if (enemies[i].active) enemies[i].update(dt, ctx);
 
+    this.bunny.update(dt);
     this.boss.update(dt, hero.x, hero.y);
     this.enemyShots.update(dt);
     this.checkHeroHits();
@@ -262,8 +289,16 @@ export class HappyHillsScene extends Phaser.Scene {
           const e = this.enemies.obtain();
           if (e) e.spawn(s.def, GAME_WIDTH + ENEMY_SPAWN_MARGIN, s.y, s.carrier);
         }
+        // Mid-level tank: walks in on schedule and stays until destroyed, while waves continue.
+        if (!this.bunnyDone && this.levelTime >= HAPPY_HILLS.midBoss.at) {
+          this.bunnyDone = true;
+          this.bunny.enter();
+          this.hud.showBossBar(true, 0xffb347);
+          this.hud.setBossHp(1);
+        }
         const lastAt = spawns.length ? spawns[spawns.length - 1].at : 0;
-        if (this.spawnIndex >= spawns.length && this.levelTime >= lastAt + HAPPY_HILLS.bossDelay) {
+        const bunnyGone = this.bunny.state === 'idle' || this.bunny.finished;
+        if (this.spawnIndex >= spawns.length && this.levelTime >= lastAt + HAPPY_HILLS.bossDelay && bunnyGone) {
           this.setPhase('warning');
           this.hud.showBanner('WARNING!\nMECHA-TURKEY APPROACHING', HAPPY_HILLS.warningTime, '#ff5a5a');
         }
@@ -302,6 +337,16 @@ export class HappyHillsScene extends Phaser.Scene {
         const dx = e.x - hero.x;
         const dy = e.y - hero.y;
         const rr = e.radius + r;
+        hit = dx * dx + dy * dy < rr * rr;
+      }
+    }
+
+    if (!hit && this.bunny.solid) {
+      const boxes = this.bunny.hurtboxes;
+      for (let i = 0; i < boxes.length && !hit; i++) {
+        const dx = boxes[i].x - hero.x;
+        const dy = boxes[i].y - hero.y;
+        const rr = boxes[i].radius + r;
         hit = dx * dx + dy * dy < rr * rr;
       }
     }
@@ -393,6 +438,7 @@ export class HappyHillsScene extends Phaser.Scene {
     const enemies = this.enemies.items;
     for (let i = 0; i < enemies.length; i++) if (enemies[i].isTargetable()) enemies[i].takeDamage(SUPER_WAVE.enemyDamage);
     if (this.boss.vulnerable) this.boss.takeDamage(SUPER_WAVE.bossDamage);
+    if (this.bunny.vulnerable) this.bunny.takeDamage(SUPER_WAVE.bossDamage);
   }
 
   private updatePickups(dt: number): void {
@@ -481,6 +527,9 @@ export class HappyHillsScene extends Phaser.Scene {
     for (let i = 0; i < enemies.length; i++) if (enemies[i].active) g.strokeCircle(enemies[i].x, enemies[i].y, enemies[i].radius);
     if (this.boss.solid) {
       for (const h of this.boss.hurtboxes) g.strokeCircle(h.x, h.y, h.radius);
+    }
+    if (this.bunny.solid) {
+      for (const h of this.bunny.hurtboxes) g.strokeCircle(h.x, h.y, h.radius);
     }
     g.lineStyle(1, 0xff0000, 1);
     g.strokeCircle(this.hero.x, this.hero.y, this.hero.stats.hitboxRadius);

@@ -7,6 +7,7 @@ import { Pool } from './Pool';
 const CULL_MARGIN = 60;
 const BULLET_RADIUS = 6;
 const DRUMSTICK_RADIUS = 9;
+const EGG_DESIGNS = 12;
 
 /** Every hostile projectile: plain bullets plus arcing drumstick missiles that burst. */
 export class EnemyShots {
@@ -79,6 +80,17 @@ export class EnemyShots {
     d.lifetime = Infinity;
   }
 
+  /** A spinning Easter egg on a plain ballistic arc (random design). */
+  egg(x: number, y: number, vx: number, vy: number, gravity: number, spin: number, radius: number): void {
+    const d = this.drumsticks.obtain();
+    if (!d) return;
+    d.setTexture('eggs', Math.floor(Math.random() * EGG_DESIGNS));
+    d.launch(x, y, vx, vy, radius);
+    d.gravity = gravity;
+    d.lifetime = Infinity;
+    d.spin = spin;
+  }
+
   update(dt: number): void {
     const items = this.bullets.items;
     for (let i = 0; i < items.length; i++) {
@@ -99,7 +111,9 @@ export class EnemyShots {
       d.vy += d.gravity * dt;
       d.x += d.vx * dt;
       d.y += d.vy * dt;
-      d.rotation = Math.atan2(d.vy, d.vx);
+      // Eggs tumble; everything else points along its path.
+      if (d.spin !== 0) d.rotation += d.spin * dt;
+      else d.rotation = Math.atan2(d.vy, d.vx);
       if (d.age >= d.lifetime) {
         this.effects.pop(d.x, d.y, 1.2, 0xffb347);
         this.radial(d.x, d.y, d.burstCount, d.burstSpeed, Math.random() * Math.PI);

@@ -103,9 +103,9 @@ export class Hud {
     this.scoreText.setText(String(score));
   }
 
-  showBossBar(visible: boolean): void {
+  showBossBar(visible: boolean, color = 0xff5577): void {
     this.bossBarBack.setVisible(visible);
-    this.bossBar.setVisible(visible);
+    this.bossBar.setVisible(visible).setFillStyle(color);
   }
 
   setBossHp(fraction: number): void {
