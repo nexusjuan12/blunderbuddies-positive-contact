@@ -4,10 +4,12 @@ import type { Power, Weapon, WeaponContext } from './Weapon';
 
 const DEG = Math.PI / 180;
 
-/** Nuh-Uh: volleys of stars that steer toward the nearest target. */
+/** Nuh-Uh: volleys of colourful stars that curve toward targets ahead, sized in a wave, with after-trails. */
 export class HomingStars implements Weapon {
   rate = 1;
   private timer = 0;
+  private shot = 0;
+  private wave = 0;
 
   constructor(
     private readonly cfg: HomingWeapon,
@@ -31,17 +33,26 @@ export class HomingStars implements Weapon {
     const c = this.cfg;
     const p = this.power;
     const spread = c.spreadDeg * DEG;
+    this.wave += c.waveStep;
+    const lockCos = Math.cos((c.lockConeDeg * DEG) / 2);
     for (let i = 0; i < c.count; i++) {
       const t = c.count === 1 ? 0 : i / (c.count - 1) - 0.5;
       const a = t * spread;
-      const b = this.ctx.projectiles.spawn(c.texture, x + 10, y, Math.cos(a) * c.speed, Math.sin(a) * c.speed, c.radius * p.size, c.damage * p.damage, p.size);
+      // Neighbouring stars sit at opposite points of the size wave.
+      const w = 0.5 + 0.5 * Math.sin(this.wave + i * Math.PI);
+      const size = (c.sizeWave[0] + (c.sizeWave[1] - c.sizeWave[0]) * w) * p.size;
+      const colour = this.shot++ % c.textures.length;
+      const b = this.ctx.projectiles.spawn(c.textures[colour], x + 10, y, Math.cos(a) * c.speed, Math.sin(a) * c.speed, c.radius * size, c.damage * p.damage, size);
       if (!b) return;
       b.mode = Mode.Homing;
       b.speed = c.speed;
       b.turnRate = c.turnRate;
       b.retargetTimer = 0;
+      b.lockCos = lockCos;
+      b.lockRangeSq = c.lockRange * c.lockRange;
       b.lifetime = c.lifetime;
       b.spin = c.spin;
+      b.trailTint = c.trailTints[colour];
     }
   }
 

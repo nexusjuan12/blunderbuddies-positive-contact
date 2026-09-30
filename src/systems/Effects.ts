@@ -10,6 +10,7 @@ class Particle extends Phaser.GameObjects.Image {
   startScale = 1;
   endScale = 1;
   drag = 0;
+  maxAlpha = 1;
 
   constructor(scene: Phaser.Scene) {
     super(scene, -100, -100, 'spark');
@@ -23,7 +24,7 @@ class Particle extends Phaser.GameObjects.Image {
 export class Effects {
   private readonly pool: Pool<Particle>;
 
-  constructor(scene: Phaser.Scene, size = 220) {
+  constructor(scene: Phaser.Scene, size = 380) {
     this.pool = new Pool(size, () => new Particle(scene));
   }
 
@@ -38,9 +39,9 @@ export class Effects {
     endScale: number,
     tint: number,
     drag: number,
-  ): void {
+  ): Particle | null {
     const p = this.pool.obtain();
-    if (!p) return;
+    if (!p) return null;
     p.setTexture(texture);
     p.setPosition(x, y);
     p.vx = vx;
@@ -51,7 +52,19 @@ export class Effects {
     p.endScale = endScale;
     p.drag = drag;
     p.setScale(startScale).setAlpha(1).setTint(tint);
+    p.setBlendMode(Phaser.BlendModes.NORMAL);
+    p.maxAlpha = 1;
     p.setActive(true).setVisible(true);
+    return p;
+  }
+
+  /** One puff of a projectile's glowing after-trail (additive, shrinks and fades fast). */
+  trail(x: number, y: number, tint: number, scale: number): void {
+    const p = this.emit('spark', x, y, 0, 0, 0.17, 1.7 * scale, 0.3 * scale, tint, 0);
+    if (p) {
+      p.setBlendMode(Phaser.BlendModes.ADD);
+      p.maxAlpha = 0.7;
+    }
   }
 
   /** Small radial spray of sparks. */
@@ -97,7 +110,7 @@ export class Effects {
       p.x += p.vx * dt;
       p.y += p.vy * dt;
       p.setScale(p.startScale + (p.endScale - p.startScale) * t);
-      p.setAlpha(1 - t * t);
+      p.setAlpha(p.maxAlpha * (1 - t * t));
     }
   }
 }

@@ -149,7 +149,13 @@ export class HappyHillsScene extends Phaser.Scene {
     });
 
     const targets: Target[] = [...this.enemies.items, ...this.bunny.hurtboxes, ...this.boss.hurtboxes];
-    this.projectiles = new HeroProjectiles(this, targets, (x, y) => this.effects.sparks(x, y, 2, 0xffe680, 90), 420);
+    this.projectiles = new HeroProjectiles(
+      this,
+      targets,
+      (x, y) => this.effects.sparks(x, y, 2, 0xffe680, 90),
+      (x, y, tint, scale) => this.effects.trail(x, y, tint, scale),
+      420,
+    );
     const ctx: WeaponContext = { scene: this, projectiles: this.projectiles, enemyShots: this.enemyShots, effects: this.effects };
     this.weapon = createWeapon(stats.weapon, ctx);
     this.team = new Team(this, ctx);

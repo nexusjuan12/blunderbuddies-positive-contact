@@ -47,6 +47,10 @@ class BossHurtbox implements Target {
     this.radius = def.radius * scale;
   }
 
+  get owner(): object {
+    return this.boss;
+  }
+
   isTargetable(): boolean {
     return this.boss.vulnerable;
   }

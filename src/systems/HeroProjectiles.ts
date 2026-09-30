@@ -5,6 +5,8 @@ import type { Target } from '../entities/Target';
 import { Pool } from './Pool';
 
 const CULL_MARGIN = 40;
+/** Seconds between after-trail puffs for projectiles that leave one. */
+const TRAIL_EVERY = 0.018;
 
 /** How a hero projectile moves. */
 export const Mode = {
@@ -27,6 +29,7 @@ export class HeroProjectiles {
     scene: Phaser.Scene,
     readonly targets: readonly Target[],
     private readonly onHit: (x: number, y: number) => void,
+    private readonly onTrail: (x: number, y: number, tint: number, scale: number) => void,
     size = 300,
   ) {
     this.pool = new Pool(size, () => new Bullet(scene, 'star', Depth.HeroBullets));
@@ -66,6 +69,13 @@ export class HeroProjectiles {
         }
       }
       b.rotation += b.spin * dt;
+      if (b.trailTint !== 0) {
+        b.trailTimer -= dt;
+        if (b.trailTimer <= 0) {
+          b.trailTimer = TRAIL_EVERY;
+          this.onTrail(b.x, b.y, b.trailTint, b.baseScale);
+        }
+      }
       this.resolveHit(b);
     }
   }
@@ -100,7 +110,7 @@ export class HeroProjectiles {
   private steer(b: Bullet, dt: number): void {
     b.retargetTimer -= dt;
     if (b.target === null || !b.target.isTargetable() || b.retargetTimer <= 0) {
-      b.target = this.nearest(b.x, b.y);
+      b.target = this.acquire(b);
       b.retargetTimer = 0.2;
     }
     const t = b.target;
@@ -116,20 +126,25 @@ export class HeroProjectiles {
     b.vy = Math.sin(a) * b.speed;
   }
 
-  nearest(x: number, y: number): Target | null {
+  /** Nearest target inside the projectile's lock cone (around its heading) and range. */
+  private acquire(b: Bullet): Target | null {
     let best: Target | null = null;
-    let bestD = Infinity;
+    let bestD = b.lockRangeSq;
+    const inv = 1 / (Math.sqrt(b.vx * b.vx + b.vy * b.vy) || 1);
+    const hx = b.vx * inv;
+    const hy = b.vy * inv;
     const targets = this.targets;
     for (let i = 0; i < targets.length; i++) {
       const t = targets[i];
       if (!t.isTargetable()) continue;
-      const dx = t.x - x;
-      const dy = t.y - y;
+      const dx = t.x - b.x;
+      const dy = t.y - b.y;
       const d = dx * dx + dy * dy;
-      if (d < bestD) {
-        bestD = d;
-        best = t;
-      }
+      if (d >= bestD) continue;
+      // Inside the cone? (dot of heading and direction to target vs cos of the half-angle)
+      if (dx * hx + dy * hy < b.lockCos * Math.sqrt(d)) continue;
+      bestD = d;
+      best = t;
     }
     return best;
   }

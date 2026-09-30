@@ -37,6 +37,10 @@ class BunnyHurtbox implements Target {
     readonly offsetY: number,
   ) {}
 
+  get owner(): object {
+    return this.bunny;
+  }
+
   isTargetable(): boolean {
     return this.bunny.vulnerable;
   }

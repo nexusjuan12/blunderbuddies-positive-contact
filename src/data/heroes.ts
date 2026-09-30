@@ -2,10 +2,20 @@
 
 export type HeroId = 'nuhuh' | 'uhhuh' | 'oopsie' | 'whoopsie' | 'teehee';
 
-/** Nuh-Uh: stars that home in on the nearest target. */
+/** Nuh-Uh: colourful stars that curve toward targets ahead of them. */
 export interface HomingWeapon {
   kind: 'homing';
-  texture: string;
+  /** One texture per star colour, cycled, with the matching trail tint. */
+  textures: readonly string[];
+  trailTints: readonly number[];
+  /** Star size swings between these scales from shot to shot, like a wave. */
+  sizeWave: readonly [number, number];
+  /** How far the wave advances per volley, radians. */
+  waveStep: number;
+  /** A star only homes on targets within this cone around its heading (full angle, degrees)... */
+  lockConeDeg: number;
+  /** ...and within this distance, px. Otherwise it flies straight. */
+  lockRange: number;
   /** Seconds between volleys. */
   interval: number;
   count: number;
@@ -157,13 +167,18 @@ export const HEROES: Record<HeroId, HeroStats> = {
     icon: 'star',
     weapon: {
       kind: 'homing',
-      texture: 'star',
-      interval: 0.12,
+      textures: ['star-0', 'star-1', 'star-2', 'star-3', 'star-4'],
+      trailTints: [0xffd23f, 0xff6ec7, 0x5fe0ff, 0x9dff6a, 0xb98cff],
+      sizeWave: [0.7, 1.2],
+      waveStep: 0.55,
+      lockConeDeg: 80,
+      lockRange: 460,
+      interval: 0.16,
       count: 2,
       spreadDeg: 14,
       speed: 620,
-      turnRate: 7,
-      damage: 1,
+      turnRate: 3.2,
+      damage: 0.85,
       radius: 9,
       lifetime: 1.6,
       spin: 12,
@@ -228,7 +243,7 @@ export const HEROES: Record<HeroId, HeroStats> = {
     ...assets('teehee'),
     name: 'TEE-HEE',
     icon: 'rainbow',
-    weapon: { kind: 'beam', width: 22, dps: 24 },
+    weapon: { kind: 'beam', width: 22, dps: 19 },
   },
 };
 

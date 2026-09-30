@@ -49,10 +49,16 @@ export class RainbowBeam implements Weapon {
 
   private hitTargets(x: number, y: number, half: number, damage: number): void {
     const targets = this.ctx.projectiles.targets;
+    // A boss's hurtboxes sit next to each other in the list: hit each boss only once per tick.
+    let lastOwner: object | undefined;
     for (let i = 0; i < targets.length; i++) {
       const t = targets[i];
       if (!t.isTargetable() || t.x + t.radius < x) continue;
       if (Math.abs(t.y - y) > half + t.radius) continue;
+      if (t.owner !== undefined) {
+        if (t.owner === lastOwner) continue;
+        lastOwner = t.owner;
+      }
       t.takeDamage(damage);
       if (this.sparkTimer <= 0) {
         this.ctx.effects.sparks(Math.max(x, t.x - t.radius * 0.7), y, 2, 0xffffff, 120);

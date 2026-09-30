@@ -16,6 +16,12 @@ export class Bullet extends Phaser.GameObjects.Image {
   speed = 0;
   turnRate = 0;
   retargetTimer = 0;
+  /** Homing lock limits: cos of the half-cone around the heading, and squared range. */
+  lockCos = -1;
+  lockRangeSq = Infinity;
+  /** After-trail colour (0 = no trail) and timer. */
+  trailTint = 0;
+  trailTimer = 0;
   /** Hero projectiles: movement mode, bounces left, squash on bounce, base scale. */
   mode = 0;
   bounces = 0;
@@ -43,6 +49,10 @@ export class Bullet extends Phaser.GameObjects.Image {
     this.gravity = 0;
     this.target = null;
     this.burstCount = 0;
+    this.trailTint = 0;
+    this.trailTimer = 0;
+    this.lockCos = -1;
+    this.lockRangeSq = Infinity;
     this.mode = 0;
     this.bounces = 0;
     this.squash = 0;

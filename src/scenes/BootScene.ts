@@ -5,7 +5,7 @@ import { TITLE } from '../data/title';
 import type { FlySheetMeta } from '../entities/Hero';
 import type { BunnyMeta } from '../entities/RoboBunny';
 import { canvasTexture } from '../systems/canvasTexture';
-import { flower, heart, RAINBOW, rainbow } from '../systems/shapes';
+import { flower, heart, RAINBOW, rainbow, star } from '../systems/shapes';
 import { pillTexture, TITLE_FONT, UI_K } from '../systems/uiText';
 
 const P = 'processed/';
@@ -154,6 +154,29 @@ export class BootScene extends Phaser.Scene {
       c.strokeStyle = '#fff6c2';
       c.stroke();
     });
+
+    // Nuh-Uh's stars: one per colour, with a soft glow and a bright edge.
+    ['#ffd23f', '#ff6ec7', '#5fe0ff', '#9dff6a', '#b98cff'].forEach((col, i) =>
+      this.canvas(`star-${i}`, 48, 48, (c) => {
+        c.translate(24, 24);
+        const g = c.createRadialGradient(0, 0, 4, 0, 0, 24);
+        g.addColorStop(0, col);
+        g.addColorStop(1, 'rgba(255,255,255,0)');
+        c.globalAlpha = 0.55;
+        c.fillStyle = g;
+        c.fillRect(-24, -24, 48, 48);
+        c.globalAlpha = 1;
+        star(c, 15, 0.45);
+        c.fillStyle = col;
+        c.fill();
+        c.lineWidth = 2.5;
+        c.strokeStyle = '#ffffff';
+        c.stroke();
+        star(c, 6, 0.45);
+        c.fillStyle = 'rgba(255,255,255,.85)';
+        c.fill();
+      }),
+    );
 
     // Hero projectiles and select-screen icons (Buddy motifs).
     this.canvas('heart', 32, 32, (c) => {
