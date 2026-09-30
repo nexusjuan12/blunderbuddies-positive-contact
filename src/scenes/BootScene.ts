@@ -309,6 +309,56 @@ export class BootScene extends Phaser.Scene {
     });
 
     this.glowBall('bullet', 20, '#ff2e9a', '#ffffff');
+    this.glowBall('bullet-big', 34, '#ff5a1f', '#fff2c0');
+    this.glowBall('bullet-split', 26, '#ffc400', '#ffffff');
+    // Pointed bullets are drawn facing right and rotated along their path.
+    this.canvas('bullet-bolt', 30, 14, (c) => {
+      c.beginPath();
+      c.roundRect(1, 2, 28, 10, 5);
+      c.fillStyle = '#b13cff';
+      c.fill();
+      c.beginPath();
+      c.roundRect(7, 5, 16, 4, 2);
+      c.fillStyle = '#ffffff';
+      c.fill();
+    });
+    this.canvas('bullet-shard', 26, 14, (c) => {
+      c.beginPath();
+      c.moveTo(25, 7);
+      c.lineTo(11, 1);
+      c.lineTo(1, 7);
+      c.lineTo(11, 13);
+      c.closePath();
+      c.fillStyle = '#18c8ff';
+      c.fill();
+      c.lineWidth = 1.5;
+      c.strokeStyle = '#08306b';
+      c.stroke();
+      c.beginPath();
+      c.moveTo(20, 7);
+      c.lineTo(11, 4);
+      c.lineTo(6, 7);
+      c.lineTo(11, 10);
+      c.closePath();
+      c.fillStyle = '#ffffff';
+      c.fill();
+    });
+    this.canvas('bullet-feather', 34, 14, (c) => {
+      c.beginPath();
+      c.moveTo(33, 7);
+      c.quadraticCurveTo(18, -2, 3, 7);
+      c.quadraticCurveTo(18, 16, 33, 7);
+      c.fillStyle = '#ff7a1a';
+      c.fill();
+      c.lineWidth = 1.5;
+      c.strokeStyle = '#6a1d00';
+      c.stroke();
+      c.beginPath();
+      c.moveTo(4, 7);
+      c.lineTo(30, 7);
+      c.strokeStyle = '#fff2c0';
+      c.stroke();
+    });
     this.glowBall('bullet-ring', 20, '#ff8a00', '#fff2c0');
 
     this.canvas('drumstick', 44, 22, (c) => {

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import type { BulletStyle } from '../data/bullets';
 import type { Target } from './Target';
 
 /** A pooled projectile. Movement is handled by the owning shot system. */
@@ -27,9 +28,13 @@ export class Bullet extends Phaser.GameObjects.Image {
   bounces = 0;
   squash = 0;
   baseScale = 1;
+  /** Enemy bullets: look + movement rules. */
+  style: BulletStyle | null = null;
   /** Burst-on-expiry state (drumstick missiles). */
   burstCount = 0;
   burstSpeed = 0;
+  /** Bullet style id the burst is made of. */
+  burstStyle = 'orb';
 
   constructor(scene: Phaser.Scene, texture: string, depth: number) {
     super(scene, -100, -100, texture);
@@ -49,6 +54,7 @@ export class Bullet extends Phaser.GameObjects.Image {
     this.gravity = 0;
     this.target = null;
     this.burstCount = 0;
+    this.style = null;
     this.trailTint = 0;
     this.trailTimer = 0;
     this.lockCos = -1;

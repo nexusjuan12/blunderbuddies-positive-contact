@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { Depth, GAME_WIDTH } from '../config';
 import type { BossDef, BossPhase, Hurtbox } from '../data/bosses';
+import type { BulletStyleId } from '../data/bullets';
 import type { Effects } from '../systems/Effects';
 import type { EnemyShots } from '../systems/EnemyShots';
 import type { Target } from './Target';
@@ -233,7 +234,8 @@ export class MechaTurkey {
         if (this.shots.bullets.countActive() < p.maxBullets) {
           const half = (p.sprayArcDeg * Math.PI) / 360;
           const a = Math.PI + Phaser.Math.FloatBetween(-half, half);
-          this.shots.fire(this.worldX(def.back.x), this.worldY(def.back.y), a, Phaser.Math.FloatBetween(p.spraySpeed[0], p.spraySpeed[1]));
+          const style = p.sprayStyles[Math.floor(Math.random() * p.sprayStyles.length)];
+          this.shots.fire(this.worldX(def.back.x), this.worldY(def.back.y), a, Phaser.Math.FloatBetween(p.spraySpeed[0], p.spraySpeed[1]), style);
         }
       }
       return 11;
@@ -247,17 +249,19 @@ export class MechaTurkey {
       this.volleys++;
       if (p.pattern === 'drumsticks') {
         this.attackTimer = p.interval;
-        for (let i = 0; i < p.perVolley; i++) this.launchDrumstick(p.launchSpeedX, p.launchSpeedY, p.gravity, p.fuse, p.burstCount, p.burstSpeed);
+        for (let i = 0; i < p.perVolley; i++) this.launchDrumstick(p.launchSpeedX, p.launchSpeedY, p.gravity, p.fuse, p.burstCount, p.burstSpeed, p.burstStyle);
       } else {
         this.attackTimer = p.interval;
         this.gobble = 1;
         const bx = this.worldX(def.beak.x);
         const by = this.worldY(def.beak.y);
         const gap = Math.atan2(heroY - by, heroX - bx) + Phaser.Math.FloatBetween(-p.gapJitter, p.gapJitter);
-        this.shots.ring(bx, by, p.ringCount, gap, p.gapSize, p.ringSpeed);
+        const ringStyle = p.ringStyles[this.volleys % p.ringStyles.length];
+        // Big orbs are slower, so alternate rings drift apart instead of stacking.
+        this.shots.ring(bx, by, p.ringCount, gap, p.gapSize, ringStyle === 'bigOrb' ? p.ringSpeed * 0.75 : p.ringSpeed, ringStyle);
         if (p.drumstickEvery > 0 && this.volleys % p.drumstickEvery === 0) {
           const d = this.def.phases[0];
-          if (d.pattern === 'drumsticks') this.launchDrumstick(d.launchSpeedX, d.launchSpeedY, d.gravity, d.fuse, d.burstCount, d.burstSpeed);
+          if (d.pattern === 'drumsticks') this.launchDrumstick(d.launchSpeedX, d.launchSpeedY, d.gravity, d.fuse, d.burstCount, d.burstSpeed, d.burstStyle);
         }
       }
     }
@@ -271,6 +275,7 @@ export class MechaTurkey {
     fuse: number,
     burstCount: number,
     burstSpeed: number,
+    burstStyle: BulletStyleId,
   ): void {
     this.shots.drumstick(
       this.worldX(this.def.back.x),
@@ -281,6 +286,7 @@ export class MechaTurkey {
       fuse * Phaser.Math.FloatBetween(0.85, 1.15),
       burstCount,
       burstSpeed,
+      burstStyle,
     );
   }
 

@@ -1,3 +1,5 @@
+import type { BulletStyleId } from './bullets';
+
 /** Mecha-turkey (Mr. Uh-Uh-No, Happy Hills). Units: px, px/s, seconds. */
 
 export interface Hurtbox {
@@ -17,6 +19,8 @@ export interface DrumstickPhase {
   fuse: number;
   burstCount: number;
   burstSpeed: number;
+  /** What each drumstick bursts into. */
+  burstStyle: BulletStyleId;
 }
 
 export interface GobblePhase {
@@ -26,6 +30,8 @@ export interface GobblePhase {
   /** Bullets left out of the ring to make the gap. */
   gapSize: number;
   ringSpeed: number;
+  /** Successive rings cycle through these styles. */
+  ringStyles: readonly BulletStyleId[];
   /** Random offset of the gap from the hero's direction, radians. */
   gapJitter: number;
   /** Launch one drumstick every N rings (0 = never). */
@@ -40,6 +46,8 @@ export interface TantrumPhase {
   sprayInterval: number;
   sprayArcDeg: number;
   spraySpeed: readonly [number, number];
+  /** Each sprayed bullet picks one of these at random. */
+  sprayStyles: readonly BulletStyleId[];
   /** Hard cap on live enemy bullets during the tantrum, to keep it readable. */
   maxBullets: number;
 }
@@ -97,6 +105,7 @@ export const MECHA_TURKEY: BossDef = {
       fuse: 1.05,
       burstCount: 10,
       burstSpeed: 135,
+      burstStyle: 'feather',
     },
     {
       pattern: 'gobble',
@@ -105,6 +114,7 @@ export const MECHA_TURKEY: BossDef = {
       ringCount: 30,
       gapSize: 5,
       ringSpeed: 120,
+      ringStyles: ['ringOrb', 'bigOrb'],
       gapJitter: 0.5,
       drumstickEvery: 2,
     },
@@ -116,6 +126,7 @@ export const MECHA_TURKEY: BossDef = {
       sprayInterval: 0.065,
       sprayArcDeg: 150,
       spraySpeed: [110, 200],
+      sprayStyles: ['orb', 'orb', 'feather', 'bigOrb', 'splitter'],
       maxBullets: 160,
     },
   ],

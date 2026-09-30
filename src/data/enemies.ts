@@ -1,3 +1,5 @@
+import type { BulletStyleId } from './bullets';
+
 /**
  * Mr. Uh-Uh-No's mimics: big evil-faced heads copied from the heroes.
  * Units: px, px/s, seconds.
@@ -35,6 +37,8 @@ export interface ChargerEnemyDef extends EnemyBase {
   /** Telegraph time before the dash. */
   windup: number;
   dashSpeed: number;
+  /** A fan of shots fired at the hero as the dash begins. */
+  launchShot: { style: BulletStyleId; count: number; spreadDeg: number; speed: number };
 }
 
 export interface TurretEnemyDef extends EnemyBase {
@@ -46,6 +50,7 @@ export interface TurretEnemyDef extends EnemyBase {
   burst: number;
   burstGap: number;
   bulletSpeed: number;
+  bulletStyle: BulletStyleId;
   /** Delay after entering the screen before the first burst. */
   firstShotDelay: number;
 }
@@ -95,6 +100,7 @@ export const ENEMIES = {
     stopDistance: 190,
     windup: 0.7,
     dashSpeed: 520,
+    launchShot: { style: 'shard', count: 3, spreadDeg: 40, speed: 250 },
   },
   turret: {
     behavior: 'turret',
@@ -109,7 +115,8 @@ export const ENEMIES = {
     fireInterval: 1.6,
     burst: 3,
     burstGap: 0.12,
-    bulletSpeed: 210,
+    bulletSpeed: 190,
+    bulletStyle: 'bolt',
     firstShotDelay: 0.6,
   },
   elon: {

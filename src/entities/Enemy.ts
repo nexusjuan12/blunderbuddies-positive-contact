@@ -143,6 +143,8 @@ export class Enemy extends Phaser.GameObjects.Sprite implements Target {
             const a = Math.atan2(ctx.heroY - this.y, ctx.heroX - this.x);
             this.vx = Math.cos(a) * def.dashSpeed;
             this.vy = Math.sin(a) * def.dashSpeed;
+            const shot = def.launchShot;
+            ctx.shots.fan(this.x, this.y, a, shot.count, shot.spreadDeg, shot.speed, shot.style);
             this.rotation = 0;
             this.step = 2;
             this.stepTime = 0;
@@ -160,7 +162,7 @@ export class Enemy extends Phaser.GameObjects.Sprite implements Target {
           this.fireTimer -= dt;
           if (this.fireTimer <= 0) {
             if (this.burstLeft === 0) this.burstLeft = def.burst;
-            ctx.shots.aimed(this.x - this.displayWidth * 0.2, this.y, ctx.heroX, ctx.heroY, def.bulletSpeed);
+            ctx.shots.aimed(this.x - def.radius, this.y, ctx.heroX, ctx.heroY, def.bulletSpeed, def.bulletStyle);
             this.burstLeft--;
             this.fireTimer = this.burstLeft > 0 ? def.burstGap : def.fireInterval;
           }

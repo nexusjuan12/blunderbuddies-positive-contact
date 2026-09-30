@@ -1,11 +1,13 @@
 import Phaser from 'phaser';
 import { Depth, GAME_HEIGHT, GAME_WIDTH } from '../config';
+import { BULLETS, type BulletStyle, type BulletStyleId } from '../data/bullets';
 import { Bullet } from '../entities/Bullet';
 import type { Effects } from './Effects';
 import { Pool } from './Pool';
 
 const CULL_MARGIN = 60;
 const BULLET_RADIUS = 6;
+const DEG = Math.PI / 180;
 const DRUMSTICK_RADIUS = 9;
 const EGG_DESIGNS = 12;
 
@@ -22,31 +24,48 @@ export class EnemyShots {
     this.drumsticks = new Pool(24, () => new Bullet(scene, 'drumstick', Depth.EnemyBullets));
   }
 
-  fire(x: number, y: number, angle: number, speed: number, texture = 'bullet'): Bullet | null {
+  fire(x: number, y: number, angle: number, speed: number, style: BulletStyleId = 'orb'): Bullet | null {
     const b = this.bullets.obtain();
     if (!b) return null;
-    if (b.texture.key !== texture) b.setTexture(texture);
-    return b.launch(x, y, Math.cos(angle) * speed, Math.sin(angle) * speed, BULLET_RADIUS);
+    const st: BulletStyle = BULLETS[style];
+    if (b.texture.key !== st.texture) b.setTexture(st.texture);
+    // Accelerating bullets start slow; `speed` on the bullet is what they build up to.
+    const start = st.move === 'accelerate' ? speed * st.startFactor : speed;
+    b.launch(x, y, Math.cos(angle) * start, Math.sin(angle) * start, st.radius);
+    b.style = st;
+    b.speed = st.move === 'accelerate' ? speed * st.maxFactor : speed;
+    b.spin = st.spin ?? 0;
+    if (st.pointAlongPath) b.rotation = angle;
+    return b;
   }
 
-  aimed(x: number, y: number, tx: number, ty: number, speed: number): void {
-    this.fire(x, y, Math.atan2(ty - y, tx - x), speed);
+  aimed(x: number, y: number, tx: number, ty: number, speed: number, style: BulletStyleId = 'orb'): void {
+    this.fire(x, y, Math.atan2(ty - y, tx - x), speed, style);
   }
 
-  radial(x: number, y: number, count: number, speed: number, offset = 0): void {
+  /** A fan of `count` bullets centred on `angle`. */
+  fan(x: number, y: number, angle: number, count: number, spreadDeg: number, speed: number, style: BulletStyleId = 'orb'): void {
+    const spread = spreadDeg * DEG;
+    for (let i = 0; i < count; i++) {
+      const t = count === 1 ? 0 : i / (count - 1) - 0.5;
+      this.fire(x, y, angle + t * spread, speed, style);
+    }
+  }
+
+  radial(x: number, y: number, count: number, speed: number, offset = 0, style: BulletStyleId = 'orb'): void {
     const step = (Math.PI * 2) / count;
-    for (let i = 0; i < count; i++) this.fire(x, y, offset + i * step, speed);
+    for (let i = 0; i < count; i++) this.fire(x, y, offset + i * step, speed, style);
   }
 
   /** Expanding ring with `gapSize` bullets missing around `gapAngle`. */
-  ring(x: number, y: number, count: number, gapAngle: number, gapSize: number, speed: number): void {
+  ring(x: number, y: number, count: number, gapAngle: number, gapSize: number, speed: number, style: BulletStyleId = 'ringOrb'): void {
     const step = (Math.PI * 2) / count;
     const half = gapSize / 2;
     for (let i = 0; i < count; i++) {
       const a = gapAngle + (i + 0.5) * step - Math.PI;
       // Index distance from the gap centre (which sits at i = count/2).
       if (Math.abs(i + 0.5 - count / 2) < half) continue;
-      this.fire(x, y, a, speed, 'bullet-ring');
+      this.fire(x, y, a, speed, style);
     }
   }
 
@@ -59,6 +78,7 @@ export class EnemyShots {
     fuse: number,
     burstCount: number,
     burstSpeed: number,
+    burstStyle: BulletStyleId = 'orb',
   ): void {
     const d = this.drumsticks.obtain();
     if (!d) return;
@@ -68,6 +88,7 @@ export class EnemyShots {
     d.lifetime = fuse;
     d.burstCount = burstCount;
     d.burstSpeed = burstSpeed;
+    d.burstStyle = burstStyle;
   }
 
   /** A ballistic shot that lands on (tx, ty) after `time` seconds under `gravity`. Doesn't burst. */
@@ -96,8 +117,35 @@ export class EnemyShots {
     for (let i = 0; i < items.length; i++) {
       const b = items[i];
       if (!b.active) continue;
-      b.x += b.vx * dt;
-      b.y += b.vy * dt;
+      const st = b.style;
+      b.age += dt;
+      let mx = b.vx;
+      let my = b.vy;
+      if (st !== null && st.move !== 'straight') {
+        if (st.move === 'wavy') {
+          // Add a sideways swing at right angles to the heading.
+          const inv = 1 / (b.speed || 1);
+          const side = Math.cos(b.age * st.waveFrequency) * st.waveAmplitude;
+          mx += -b.vy * inv * side;
+          my += b.vx * inv * side;
+        } else if (st.move === 'accelerate') {
+          const cur = Math.sqrt(b.vx * b.vx + b.vy * b.vy) || 1;
+          const next = Math.min(b.speed, cur + st.acceleration * dt);
+          b.vx *= next / cur;
+          b.vy *= next / cur;
+          mx = b.vx;
+          my = b.vy;
+        } else if (b.age >= st.splitAfter) {
+          this.effects.pop(b.x, b.y, 0.7, 0xffe14d, 0.2);
+          this.fan(b.x, b.y, Math.atan2(b.vy, b.vx), st.splitCount, st.splitSpreadDeg, b.speed * 1.15, st.splitInto as BulletStyleId);
+          b.kill();
+          continue;
+        }
+      }
+      b.x += mx * dt;
+      b.y += my * dt;
+      if (b.spin !== 0) b.rotation += b.spin * dt;
+      else if (st !== null && st.pointAlongPath) b.rotation = Math.atan2(my, mx);
       if (b.x < -CULL_MARGIN || b.x > GAME_WIDTH + CULL_MARGIN || b.y < -CULL_MARGIN || b.y > GAME_HEIGHT + CULL_MARGIN) {
         b.kill();
       }
@@ -116,7 +164,7 @@ export class EnemyShots {
       else d.rotation = Math.atan2(d.vy, d.vx);
       if (d.age >= d.lifetime) {
         this.effects.pop(d.x, d.y, 1.2, 0xffb347);
-        this.radial(d.x, d.y, d.burstCount, d.burstSpeed, Math.random() * Math.PI);
+        this.radial(d.x, d.y, d.burstCount, d.burstSpeed, Math.random() * Math.PI, d.burstStyle as BulletStyleId);
         d.kill();
       } else if (d.y > GAME_HEIGHT + CULL_MARGIN || d.x < -CULL_MARGIN) {
         d.kill();
