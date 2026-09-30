@@ -30,7 +30,7 @@ interface Spawn {
   carrier: boolean;
 }
 
-type LevelPhase = 'waves' | 'warning' | 'boss' | 'clear' | 'over';
+type LevelPhase = 'waves' | 'warning' | 'boss' | 'clear' | 'ascent' | 'over';
 
 /** Parallax scroll speeds in px/s. */
 const SCROLL = { sky: 8, far: 36, near: 110 };
@@ -48,6 +48,19 @@ const SUN = {
   wander: 18,
 };
 const RESULT_DELAY = 2500;
+/** Stage-end climb after the villain's escape pod: the hills drop away and we arrive above the clouds. */
+const ASCENT = {
+  duration: 6,
+  /** The sun ends up here: mid-screen at cloud level. */
+  sunY: GAME_HEIGHT / 2 - 10,
+  /** Banner height during the climb (above where the sun ends up). */
+  bannerY: 120,
+  clouds: 12,
+  cloudSpeed: [260, 720] as const,
+  bannerAt: 2.2,
+  /** One cloud drifts in and bounces off the sun at this point in the climb (0..1). */
+  bounceAt: 0.38,
+};
 
 /** Level 2 of the design, used as the Milestone 1 vertical slice. */
 export class HappyHillsScene extends Phaser.Scene {
@@ -73,6 +86,19 @@ export class HappyHillsScene extends Phaser.Scene {
   private sun!: Phaser.GameObjects.Image;
   private dome!: Phaser.GameObjects.Image;
   private debugGfx: Phaser.GameObjects.Graphics | null = null;
+
+  private skyTint!: Phaser.GameObjects.Image;
+  private cloudSea!: Phaser.GameObjects.TileSprite;
+  private clouds: Phaser.GameObjects.Image[] = [];
+  private readonly cloudSpeeds = new Float32Array(ASCENT.clouds);
+  private bounceCloud!: Phaser.GameObjects.Image;
+  private bounceVx = 0;
+  private chasePod!: Phaser.GameObjects.Image;
+  private sunBaseY = SUN.y;
+  private sunSquish = 0;
+  private ascentTime = 0;
+  private ascentBanner = false;
+  private ascentDone = false;
 
   private readonly enemyCtx: EnemyContext = { heroX: 0, heroY: 0, shots: null as unknown as EnemyShots };
   private spawns: Spawn[] = [];
@@ -206,11 +232,32 @@ export class HappyHillsScene extends Phaser.Scene {
     const W = GAME_WIDTH;
     const H = GAME_HEIGHT;
     this.sky = this.add.tileSprite(0, 0, W, H, 'hh-sky').setOrigin(0).setDepth(Depth.Background);
+    // Deepens the sky as we climb (ascent only).
+    this.skyTint = this.add.image(0, 0, 'ascent-sky').setOrigin(0).setDisplaySize(W, H).setDepth(Depth.Background).setAlpha(0);
+    this.sunBaseY = SUN.y;
     this.sun = this.add.image(SUN.x, SUN.y, 'sun').setScale(0.5).setDepth(Depth.Background);
     this.far = this.add.tileSprite(0, 0, W, H, 'hh-far').setOrigin(0).setDepth(Depth.Background);
     // The Buddies' home dome, seen once at the start of the level on the far hills.
     this.dome = this.add.image(720, 432, 'hh-dome').setOrigin(0.5, 1).setScale(0.5).setDepth(Depth.Background);
     this.near = this.add.tileSprite(0, 0, W, H, 'hh-near').setOrigin(0).setDepth(Depth.Background);
+    // Start the tiles 2 px down so the top edge never blends in the wrapped bottom row
+    // (it shows as a thin line once the hills slide down during the ascent).
+    this.far.tilePositionY = 2;
+    this.near.tilePositionY = 2;
+
+    // Ascent props, hidden until the stage is cleared.
+    this.clouds = [];
+    for (let i = 0; i < ASCENT.clouds; i++) {
+      this.clouds.push(this.add.image(0, 0, 'cloud').setDepth(Depth.Background).setVisible(false));
+    }
+    this.bounceCloud = this.add.image(0, 0, 'cloud').setDepth(Depth.Background).setScale(0.8).setVisible(false);
+    this.cloudSea = this.add.tileSprite(0, H + 200, W, 200, 'cloud-sea').setOrigin(0, 0).setDepth(Depth.Background);
+    this.chasePod = this.add.image(0, 0, 'turkey-head').setDepth(Depth.Background).setScale(0.12).setVisible(false);
+    this.ascentTime = 0;
+    this.bounceVx = 0;
+    this.ascentBanner = false;
+    this.ascentDone = false;
+    this.sunSquish = 0;
   }
 
   override update(_time: number, deltaMs: number): void {
@@ -223,7 +270,7 @@ export class HappyHillsScene extends Phaser.Scene {
     this.voices.update(dt);
     this.villainVoices.update(dt);
 
-    this.updateLevelFlow();
+    this.updateLevelFlow(dt);
 
     const hero = this.hero;
     hero.update(dt, this.controls);
@@ -233,7 +280,7 @@ export class HappyHillsScene extends Phaser.Scene {
     }
     this.lastHeroState = hero.state;
     if (this.controls.superPressed) this.tryFireSuper();
-    if (hero.state === 'alive' && this.phase !== 'clear' && this.phase !== 'over') this.addMeter(SUPER_WAVE.meterTrickle * dt);
+    if (hero.state === 'alive' && this.phase !== 'clear' && this.phase !== 'ascent' && this.phase !== 'over') this.addMeter(SUPER_WAVE.meterTrickle * dt);
 
     const firing = hero.firing && this.phase !== 'clear';
     this.weapon.update(dt, firing, hero.x, hero.y);
@@ -280,13 +327,106 @@ export class HappyHillsScene extends Phaser.Scene {
         ? -SUN.lagBehind + (SUN.lagBehind + SUN.kickAhead) * Math.sin((p / SUN.kickTime) * Math.PI * 0.5)
         : SUN.kickAhead - (SUN.lagBehind + SUN.kickAhead) * Math.pow((p - SUN.kickTime) / (1 - SUN.kickTime), 1.6);
     this.sun.x = SUN.x + lag + Math.sin(t * 0.35) * SUN.wander;
-    this.sun.y = SUN.y + 18 - bounce * SUN.bounceHeight;
+    this.sun.y = this.sunBaseY + 18 - bounce * SUN.bounceHeight;
     const squash = bounce < 0.15 ? 1 - (0.15 - bounce) * 0.8 : 1;
-    this.sun.setScale(0.5 / squash, 0.5 * squash);
+    // A cloud bumping into him squeezes him sideways for a moment.
+    this.sunSquish = Math.max(0, this.sunSquish - dt * 4);
+    const bump = 1 - 0.18 * Math.sin(this.sunSquish * Math.PI);
+    this.sun.setScale((0.5 / squash) * bump, (0.5 * squash) / bump);
     this.sun.rotation = Math.sin(t * 1.1) * 0.08;
   }
 
-  private updateLevelFlow(): void {
+  /** The villain's pod has fled: lock controls and climb after it. */
+  private beginAscent(): void {
+    this.setPhase('ascent');
+    this.ascentTime = 0;
+    this.hero.beginAscent();
+    this.enemyShots.clear();
+    const enemies = this.enemies.items;
+    for (let i = 0; i < enemies.length; i++) if (enemies[i].active) enemies[i].despawn();
+    for (const p of this.pickups.items) if (p.active) p.kill();
+    this.dome.setVisible(false);
+    const [lo, hi] = ASCENT.cloudSpeed;
+    this.clouds.forEach((c, i) => {
+      const depth = Math.random();
+      this.cloudSpeeds[i] = lo + (hi - lo) * depth;
+      c.setPosition(Math.random() * GAME_WIDTH, -80 - Math.random() * GAME_HEIGHT * 1.5)
+        .setScale(0.5 + depth * 1.1)
+        .setAlpha(0.55 + depth * 0.4)
+        .setVisible(true);
+    });
+    this.chasePod.setPosition(650, 150).setVisible(true);
+  }
+
+  private updateAscent(dt: number): void {
+    this.ascentTime += dt;
+    const p = Math.min(1, this.ascentTime / ASCENT.duration);
+    const e = p * p * (3 - 2 * p);
+    const H = GAME_HEIGHT;
+
+    // The ground drops away, the sky deepens, and the sun comes down to mid-screen.
+    this.far.y = e * H * 1.1;
+    this.near.y = e * H * 1.5;
+    // Comes in early, so the ground-level haze band is covered before the hills have left.
+    this.skyTint.setAlpha(Math.min(1, e * 2.5));
+    this.sunBaseY = SUN.y + (ASCENT.sunY - SUN.y) * e;
+
+    // Clouds streak downward, fastest mid-climb, and stop recycling as we level out.
+    const rush = Math.sin(p * Math.PI);
+    for (let i = 0; i < this.clouds.length; i++) {
+      const c = this.clouds[i];
+      c.y += this.cloudSpeeds[i] * (0.15 + rush) * dt;
+      c.x -= 30 * dt;
+      if (c.y > H + 90 && p < 0.8) c.setPosition(Math.random() * GAME_WIDTH, -90);
+    }
+    // We arrive just above a sea of cloud.
+    const arrive = Math.max(0, (p - 0.5) / 0.5);
+    this.cloudSea.y = H + 200 - arrive * arrive * (3 - 2 * arrive) * 300;
+    this.cloudSea.tilePositionX += SCROLL.near * 0.6 * dt;
+
+    // One cloud drifts in from the right and bounces off the sun.
+    const b = this.bounceCloud;
+    if (!b.visible && p >= ASCENT.bounceAt && this.bounceVx === 0) {
+      b.setPosition(this.sun.x + 360, this.sun.y + 10).setVisible(true).setAlpha(1).setScale(0.8);
+      this.bounceVx = -300;
+    }
+    if (b.visible) {
+      b.x += this.bounceVx * dt;
+      b.y = this.sun.y + 10;
+      if (this.bounceVx < 0 && b.x - this.sun.x < 120) {
+        this.bounceVx = 210;
+        this.sunSquish = 1;
+        b.setScale(0.6, 0.95);
+      } else if (this.bounceVx > 0) {
+        b.setScale(b.scaleX + (0.8 - b.scaleX) * Math.min(1, dt * 6), b.scaleY + (0.8 - b.scaleY) * Math.min(1, dt * 6));
+        b.setAlpha(Math.max(0, b.alpha - dt * 0.45));
+        if (b.alpha <= 0) b.setVisible(false);
+      }
+    }
+
+    // The escape pod, far ahead and pulling away.
+    const pod = this.chasePod;
+    if (pod.visible) {
+      pod.x += 22 * dt;
+      pod.y -= (28 + 60 * p) * dt;
+      pod.rotation = Math.sin(this.ascentTime * 8) * 0.1;
+      pod.setScale(0.12 * (1 - 0.5 * p));
+      this.effects.sparks(pod.x + 8, pod.y + 14, 1, 0xffa030, 50);
+      if (pod.y < -40) pod.setVisible(false);
+    }
+
+    if (!this.ascentBanner && this.ascentTime >= ASCENT.bannerAt) {
+      this.ascentBanner = true;
+      this.hud.showBanner('STAGE 1 CLEAR!', 0, '#ffe14d', ASCENT.bannerY);
+    }
+    if (!this.ascentDone && p >= 1) {
+      this.ascentDone = true;
+      this.cameras.main.fadeOut(500, 255, 255, 255);
+      this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.finish(true));
+    }
+  }
+
+  private updateLevelFlow(dt: number): void {
     switch (this.phase) {
       case 'waves': {
         const spawns = this.spawns;
@@ -318,6 +458,13 @@ export class HappyHillsScene extends Phaser.Scene {
           this.hud.showBossBar(true);
           this.hud.setBossHp(1);
         }
+        break;
+      case 'boss':
+        // `?ascent`: knock the turkey out as soon as it can be hurt.
+        if (Debug.skipToAscent && this.boss.vulnerable) this.boss.takeDamage(this.boss.hp);
+        break;
+      case 'ascent':
+        this.updateAscent(dt);
         break;
       default:
         break;
@@ -506,12 +653,9 @@ export class HappyHillsScene extends Phaser.Scene {
 
   private onBossDefeated(): void {
     if (this.phase === 'over') return;
-    this.setPhase('clear');
     this.addScore(MECHA_TURKEY.score);
     this.hud.showBossBar(false);
-    this.enemyShots.clear();
-    this.hud.showBanner('STAGE CLEAR!', 0);
-    this.time.delayedCall(RESULT_DELAY, () => this.finish(true));
+    this.beginAscent();
   }
 
   private finish(won: boolean): void {

@@ -19,7 +19,9 @@ export const Depth = {
 const params = new URLSearchParams(window.location.search);
 export const Debug = {
   showFps: params.has('fps'),
-  skipToBoss: params.has('boss'),
+  skipToBoss: params.has('boss') || params.has('ascent'),
+  /** Jump to the turkey's defeat: escape pod and the ascent. */
+  skipToAscent: params.has('ascent'),
   /** Jump to the robo bunny's arrival (mid-level). */
   skipToBunny: params.has('bunny'),
   showHitboxes: params.has('hitboxes'),

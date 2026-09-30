@@ -3,13 +3,17 @@ import { Debug, Depth, GAME_HEIGHT, GAME_WIDTH } from '../config';
 import type { HeroStats } from '../data/heroes';
 import type { InputController } from '../systems/InputController';
 
-export type HeroState = 'entering' | 'alive' | 'dead' | 'gone';
+export type HeroState = 'entering' | 'alive' | 'dead' | 'gone' | 'ascending';
 export type HitResult = 'ignored' | 'shield' | 'life' | 'gameover';
 
 const EDGE = 16;
 const ENTER_TIME = 0.9;
 const DEAD_TIME = 1.1;
 const SPAWN_X = 170;
+/** Where the hero settles, and how far the nose points up, while climbing after the villain. */
+const ASCENT_X = 300;
+const ASCENT_Y = 300;
+const ASCENT_TILT = -0.6;
 /** Below this speed (px/s) the hitbox dot fades in, as for focus movement. */
 const SLOW_SPEED = 120;
 
@@ -115,6 +119,16 @@ export class Hero {
         break;
       case 'gone':
         break;
+      case 'ascending': {
+        // Autopilot: glide to a fixed spot, nose up, while the world drops away below.
+        const py = this.y;
+        const k = Math.min(1, dt * 2.5);
+        this.x += (ASCENT_X - this.x) * k;
+        this.y += (ASCENT_Y - this.y) * k;
+        vy = dt > 0 ? (this.y - py) / dt : 0;
+        moved = s.speed;
+        break;
+      }
     }
 
     if (this.invuln > 0) this.invuln -= dt;
@@ -122,7 +136,7 @@ export class Hero {
     // Procedural motion on top of the flight loop: bob, tilt with vertical movement, fake spin.
     const m = s.motion;
     this.bobTime += dt;
-    const tiltTarget = Phaser.Math.Clamp(vy / s.speed, -1, 1) * m.maxTilt;
+    const tiltTarget = this.state === 'ascending' ? ASCENT_TILT : Phaser.Math.Clamp(vy / s.speed, -1, 1) * m.maxTilt;
     this.tilt += (tiltTarget - this.tilt) * Math.min(1, dt * m.tiltResponse);
 
     let scaleX = s.displayScale;
@@ -138,7 +152,7 @@ export class Hero {
     sp.setPosition(this.x, this.y + Math.sin(this.bobTime * m.bobSpeed) * m.bobAmplitude);
     sp.rotation = this.tilt;
     sp.setScale(scaleX, s.displayScale);
-    const flying = this.state === 'entering' || this.state === 'alive';
+    const flying = this.state === 'entering' || this.state === 'alive' || this.state === 'ascending';
     if (this.poseLeft > 0) this.poseLeft -= dt;
     const posing = flying && this.poseLeft > 0;
     sp.setVisible(flying && !posing);
@@ -182,6 +196,14 @@ export class Hero {
   /** Brief invincibility without losing anything (e.g. a companion took the hit). */
   grantInvuln(seconds: number): void {
     this.invuln = Math.max(this.invuln, seconds);
+  }
+
+  /** Stage cleared: stop taking input and climb after the escaping villain. */
+  beginAscent(): void {
+    if (this.state === 'gone') return;
+    this.state = 'ascending';
+    this.stateTime = 0;
+    this.invuln = 0;
   }
 
   /** Fast fake horizontal spin (damage, power-up pickups). */

@@ -238,6 +238,46 @@ export class BootScene extends Phaser.Scene {
       c.fillRect(0, 0, 64, 32);
     });
 
+    // Placeholder clouds for the ascent (real cloud art wanted, see ASSETS_TODO.md).
+    this.canvas('cloud', 220, 110, (c) => {
+      const puffs: [number, number, number][] = [[60, 68, 34], [100, 50, 42], [145, 58, 36], [180, 72, 26], [35, 78, 22], [110, 78, 34]];
+      c.fillStyle = 'rgba(190,210,240,.9)';
+      for (const [x, y, r] of puffs) {
+        c.beginPath();
+        c.arc(x, y + 6, r, 0, Math.PI * 2);
+        c.fill();
+      }
+      c.fillStyle = '#ffffff';
+      for (const [x, y, r] of puffs) {
+        c.beginPath();
+        c.arc(x, y, r, 0, Math.PI * 2);
+        c.fill();
+      }
+    });
+    // High-altitude sky: clear at the top, solid blue lower down (covers the ground-level haze band).
+    this.canvas('ascent-sky', 8, 540, (c) => {
+      const g = c.createLinearGradient(0, 0, 0, 540);
+      g.addColorStop(0, 'rgba(47,111,208,.15)');
+      g.addColorStop(0.45, 'rgba(58,128,222,.8)');
+      g.addColorStop(0.6, 'rgba(70,142,232,1)');
+      g.addColorStop(1, 'rgba(120,180,245,1)');
+      c.fillStyle = g;
+      c.fillRect(0, 0, 8, 540);
+    });
+    this.canvas('cloud-sea', 512, 200, (c) => {
+      const g = c.createLinearGradient(0, 40, 0, 200);
+      g.addColorStop(0, '#ffffff');
+      g.addColorStop(1, '#c9dcf5');
+      c.fillStyle = g;
+      c.fillRect(0, 70, 512, 130);
+      // Bumps repeat every 128 px so the strip tiles seamlessly.
+      for (let x = 0; x <= 512; x += 64) {
+        c.beginPath();
+        c.arc(x, 72, x % 128 === 0 ? 44 : 32, 0, Math.PI * 2);
+        c.fill();
+      }
+    });
+
     // On-screen Super (Positive Vibes Wave) button.
     this.canvas('super-button', 128, 128, (c) => {
       c.translate(64, 64);

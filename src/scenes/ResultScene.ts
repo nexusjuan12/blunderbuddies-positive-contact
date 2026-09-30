@@ -27,7 +27,7 @@ export class ResultScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(data.won ? '#123a24' : '#1e0b2a');
 
     this.add
-      .image(W / 2, H * 0.3, headingTexture(this, 'result-title', data.won ? 'STAGE CLEAR' : 'GAME OVER', 6.5, '#ffe14d', 'rgba(255,205,58,.6)'))
+      .image(W / 2, H * 0.3, headingTexture(this, 'result-title', data.won ? 'STAGE 1 CLEAR' : 'GAME OVER', 6.5, '#ffe14d', 'rgba(255,205,58,.6)'))
       .setScale(1 / UI_K);
     this.add
       .image(W / 2, H * 0.5, headingTexture(this, 'result-score', `SCORE  ${data.score}`, 3, '#ffffff', 'rgba(134,233,255,.6)'))

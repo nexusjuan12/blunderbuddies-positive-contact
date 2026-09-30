@@ -6,6 +6,7 @@ const FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 const PIP_GAP = 16;
 const BAR_W = 420;
 const BAR_H = 10;
+const BANNER_Y = 230;
 
 /** Lives, shield pips, score, boss HP bar and banners. Updated on events, not every frame. */
 export class Hud {
@@ -59,7 +60,7 @@ export class Hud {
     this.bossBar = scene.add.rectangle(bx, 19, BAR_W, BAR_H, 0xff5577).setOrigin(0, 0).setDepth(Depth.Hud).setVisible(false);
 
     this.banner = scene.add
-      .text(GAME_WIDTH / 2, 230, '', { fontFamily: FONT, fontSize: '44px', fontStyle: 'bold', color: '#ffe14d', stroke: '#6a1030', strokeThickness: 8, align: 'center' })
+      .text(GAME_WIDTH / 2, BANNER_Y, '', { fontFamily: FONT, fontSize: '44px', fontStyle: 'bold', color: '#ffe14d', stroke: '#6a1030', strokeThickness: 8, align: 'center' })
       .setOrigin(0.5)
       .setDepth(Depth.Hud)
       .setVisible(false);
@@ -113,8 +114,9 @@ export class Hud {
   }
 
   /** Flashing centre banner. `duration` 0 keeps it up until hidden. */
-  showBanner(text: string, duration: number, color = '#ffe14d'): void {
+  showBanner(text: string, duration: number, color = '#ffe14d', y = BANNER_Y): void {
     const b = this.banner;
+    b.setY(y);
     this.scene.tweens.killTweensOf(b);
     b.setText(text).setColor(color).setVisible(true).setAlpha(1).setScale(1);
     this.scene.tweens.add({ targets: b, alpha: 0.35, duration: 220, yoyo: true, repeat: -1 });

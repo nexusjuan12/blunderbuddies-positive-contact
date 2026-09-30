@@ -31,8 +31,9 @@ export type BossState = 'idle' | 'entering' | 'fighting' | 'transition' | 'dying
 
 const FLASH_TIME = 0.04;
 const FLASH_COOLDOWN = 0.3;
-const DYING_TIME = 2.6;
-const FALL_TIME = 1.6;
+const DYING_TIME = 2.2;
+/** The detached head hovers and sputters this long before blasting off. */
+const POD_HOVER_TIME = 0.8;
 const TANTRUM_BOX = { x0: 560, x1: 820, y0: 170, y1: 380 };
 
 class BossHurtbox implements Target {
@@ -90,6 +91,11 @@ export class MechaTurkey {
   private moveY = 0;
   private stompTimer = 0;
   private boomTimer = 0;
+  private podLaunched = false;
+  private podTime = 0;
+  private podVy = 0;
+  /** Mr. Uh-Uh-No, shown clinging to the head once it detaches (stand-in art). */
+  private readonly rider: Phaser.GameObjects.Image;
 
   constructor(
     scene: Phaser.Scene,
@@ -117,6 +123,11 @@ export class MechaTurkey {
     this.legBack = byName.leg_back;
     this.head = byName.head;
     this.body = byName.body;
+
+    // Sits on top of the head; hidden until the escape.
+    this.rider = scene.add.image(this.head.x - 95, this.head.y - 300, 'uhuhno-rider').setScale(1.15).setVisible(false);
+    // Behind the head, so he peeks over the top of it.
+    this.container.addAt(this.rider, this.container.getIndex(this.head));
 
     this.hurtboxes = def.hurtboxes.map((h) => new BossHurtbox(this, h, this.scale));
     this.syncHurtboxes();
@@ -302,16 +313,53 @@ export class MechaTurkey {
       }
       this.x += Math.sin(this.stateTime * 60) * 1.5;
     } else {
-      // Topples over and falls off the bottom of the screen.
-      const t = (this.stateTime - DYING_TIME) / FALL_TIME;
-      this.container.rotation = t * 0.9;
-      this.y += (120 + t * 600) * dt;
-      this.x += 60 * dt;
-      if (t >= 1) {
-        this.state = 'dead';
-        this.container.setVisible(false);
-        this.events.onDefeated();
+      this.escape(dt);
+    }
+  }
+
+  /**
+   * The body blows apart; the head detaches with Mr. Uh-Uh-No clinging to it and rockets
+   * off the top of the screen like an escape pod.
+   */
+  private escape(dt: number): void {
+    if (!this.podLaunched) {
+      this.podLaunched = true;
+      this.podTime = 0;
+      this.podVy = 0;
+      for (let i = 0; i < this.hurtboxes.length; i++) {
+        const h = this.hurtboxes[i];
+        this.effects.explode(h.x, h.y, 3);
+        this.effects.explode(h.x + 40, h.y + 50, 2.2);
       }
+      this.body.setVisible(false);
+      this.legFront.setVisible(false);
+      this.legBack.setVisible(false);
+      this.rider.setVisible(true);
+    }
+    this.podTime += dt;
+    if (this.podTime < POD_HOVER_TIME) {
+      // Sputter in place.
+      this.x += Math.sin(this.podTime * 50) * 1.2;
+      this.y -= 25 * dt;
+    } else {
+      this.podVy -= 1100 * dt;
+      this.y += this.podVy * dt;
+      this.x -= 50 * dt;
+    }
+    this.container.rotation = Math.sin(this.podTime * 9) * 0.08;
+    // Rocket flame from the severed neck.
+    this.boomTimer -= dt;
+    if (this.boomTimer <= 0) {
+      this.boomTimer = 0.025;
+      const fx = this.worldX(this.head.x + 10);
+      const fy = this.worldY(this.head.y + 30);
+      this.effects.sparks(fx, fy, 2, 0xffa030, 120);
+      this.effects.pop(fx, fy + 10, 0.5, 0xffe14d, 0.18);
+    }
+    if (this.y < -260) {
+      this.state = 'dead';
+      this.container.setVisible(false);
+      this.events.onDefeated();
     }
   }
 
