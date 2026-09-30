@@ -2,7 +2,8 @@
 """Turn Jake's original art/audio in assets/ into game-ready files in public/processed/.
 
 Originals are only ever read. Re-run any time assets change:
-    python3 tools/process_assets.py
+    python3 tools/process_assets.py            # everything
+    python3 tools/process_assets.py cutscenes  # just one step
 Needs Pillow and ffmpeg.
 """
 from __future__ import annotations
@@ -290,6 +291,30 @@ def mecha_turkey(scale: float = 0.75) -> None:
     shutil.rmtree(TMP)
 
 
+CUTSCENES = {
+    # Story intro, played once after the first Buddy select.
+    "cutscene-intro": "0930.mp4",
+}
+
+
+def cutscenes() -> None:
+    """Re-encode cutscenes small for web/Android: H.264 + AAC, 540p, fast-start (streams while loading)."""
+    print("cutscenes")
+    for key, name in CUTSCENES.items():
+        src, dst = SRC / name, OUT / f"{key}.mp4"
+        if dst.exists() and dst.stat().st_mtime >= src.stat().st_mtime:
+            print(f"  {dst.name} (up to date)")
+            continue
+        subprocess.run(
+            ["ffmpeg", "-y", "-loglevel", "error", "-i", str(src),
+             "-vf", "scale=-2:540", "-c:v", "libx264", "-profile:v", "high", "-pix_fmt", "yuv420p",
+             "-crf", "25", "-preset", "slow", "-movflags", "+faststart",
+             "-c:a", "aac", "-b:a", "128k", str(dst)],
+            check=True,
+        )
+        print(f"  {dst.name}  {dst.stat().st_size / 1e6:.1f} MB")
+
+
 def audio() -> None:
     print("audio")
     wav = SRC / "axel-f-cover.wav"
@@ -304,12 +329,25 @@ def audio() -> None:
     print(f"  {dst.name}")
 
 
+STEPS = {
+    "sprites": sprites,
+    "buddies": buddies,
+    "spiderlons": spiderlons,
+    "title": title,
+    "backgrounds": backgrounds,
+    "mecha_turkey": mecha_turkey,
+    "audio": audio,
+    "cutscenes": cutscenes,
+}
+
 if __name__ == "__main__":
+    import sys
+
+    # Run everything, or only the steps named on the command line (e.g. `process_assets.py cutscenes`).
+    wanted = sys.argv[1:] or list(STEPS)
+    unknown = [w for w in wanted if w not in STEPS]
+    if unknown:
+        sys.exit(f"Unknown step(s): {', '.join(unknown)}. Choose from: {', '.join(STEPS)}")
     OUT.mkdir(parents=True, exist_ok=True)
-    sprites()
-    buddies()
-    spiderlons()
-    title()
-    backgrounds()
-    mecha_turkey()
-    audio()
+    for name in wanted:
+        STEPS[name]()

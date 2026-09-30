@@ -104,7 +104,8 @@ After a stage clear or game over, the results screen offers "Play again" (same B
 ## Cutscenes
 
 - Short, skippable video clips from the existing video pipeline.
-- Planned: intro, one before each boss, ending.
+- The story intro plays once per session, after the first Buddy select and before the level starts. Skip with the on-screen Skip button, Enter, Space, Esc, or a gamepad's A / Start.
+- Planned: one before each boss, ending.
 - Encoded as MP4 (H.264 + AAC) for browser and Android WebView compatibility, kept small, and lazy-loaded per level so the game starts fast.
 
 ## Controls

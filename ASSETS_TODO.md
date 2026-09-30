@@ -21,6 +21,7 @@ game-ready versions to `public/processed/` (needs Pillow + ffmpeg). Re-run it wh
 | `tmpcq1n1jae.png` (collage v2) | `title-{tl,tr,bl,br,c}.png` + `title-panels.json`, `title-bg.png` | Title screen collage panels and blurred backdrop |
 | `perfect_dark/pdark.ttf` | `pdark.ttf` | Title screen font (logo, subtitle, prompts) |
 | `title-loop.mp3` | `music-title.ogg` / `.mp3` | Title music (loops); same file as the Positive Contact track |
+| `0930.mp4` | `cutscene-intro.mp4` (540p H.264 + AAC, 5.8 MB) | Story intro after the first Buddy select |
 | `axel-f-cover.wav` | `music-happy-hills.ogg` / `.mp3` | Level music (loops) |
 | `uh-uh-no.wav` | `voice-uhuhno-taunt.mp3` | Mr. Uh-Uh-No taunt: boss arrival and each phase change |
 | `uh-uh-no-buddies-no-win.mp3` | `voice-uhuhno-defeat.mp3` | Boss defeated |

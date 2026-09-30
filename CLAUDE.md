@@ -17,7 +17,7 @@ Check the installed Phaser version in `package.json` before using an API, and do
 - `npm run dev` – local dev server (also on your LAN, for testing on a phone)
 - `npm run build` – type-check (`tsc`) + production web build into `dist/`
 - `npm run preview` – serve the production build
-- `python3 tools/process_assets.py` – regenerate `public/processed/` from `assets/` (Pillow + ffmpeg)
+- `python3 tools/process_assets.py` – regenerate `public/processed/` from `assets/` (Pillow + ffmpeg); add step names to run only those, e.g. `process_assets.py cutscenes`
 - `npx cap sync android` – copy the web build into the Android project (`npm run cap:sync` builds first)
 - APK build: via Android Studio or `./gradlew assembleDebug` in `android/` (needs JDK 21 + Android SDK; `android/` not added yet)
 

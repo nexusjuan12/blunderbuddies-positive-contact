@@ -43,7 +43,8 @@ Grouped by milestone, in `GAME_DESIGN.md` order. Tick items off as they land.
 
 ## Milestone 5: polish
 
-- [ ] Cutscenes (MP4, skippable, lazy-loaded per level)
+- [x] Story intro cutscene: skippable, streamed, plays once per session after the first Buddy select
+- [ ] More cutscenes: one before each boss, ending (add to `CUTSCENES` in `tools/process_assets.py` and `src/data/cutscenes.ts`)
 - [ ] Voice ambience
 - [ ] Ending
 - [x] Title screen

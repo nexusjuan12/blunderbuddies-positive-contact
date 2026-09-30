@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_HEIGHT as H, GAME_WIDTH as W } from '../config';
 import { HEROES, type HeroId } from '../data/heroes';
+import type { CutsceneData } from './CutsceneScene';
 import { TITLE } from '../data/title';
 import { canvasTexture } from '../systems/canvasTexture';
 import { flower, heart, rainbow, star } from '../systems/shapes';
@@ -417,7 +418,16 @@ export class TitleScene extends Phaser.Scene {
     this.tweens.add({ targets: sprite, x: W / 2, y: H - 4, scale: endScale, duration: 650, ease: 'Back.easeOut' });
     this.time.delayedCall(TITLE.confirmHold * 1000, () => {
       this.cameras.main.fadeOut(400, 6, 5, 26);
-      this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.start('HappyHills', { hero: id }));
+      this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+        // The story intro plays once per session, after the first Buddy select.
+        if (this.registry.get('introSeen')) {
+          this.scene.start('HappyHills', { hero: id });
+        } else {
+          this.registry.set('introSeen', true);
+          const data: CutsceneData = { key: 'intro', next: 'HappyHills', nextData: { hero: id } };
+          this.scene.start('Cutscene', data);
+        }
+      });
     });
   }
 
