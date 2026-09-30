@@ -1,0 +1,26 @@
+{
+  "walk": {
+    "frameWidth": 154,
+    "frameHeight": 256,
+    "frames": 12,
+    "fps": 10
+  },
+  "throw": {
+    "frameWidth": 154,
+    "frameHeight": 256,
+    "frames": 8,
+    "fps": 14
+  },
+  "feetY": 0.974609375,
+  "hitbox": {
+    "x": 0.33980582524271846,
+    "y": 0.19140625,
+    "w": 0.4174757281553398,
+    "h": 0.5625
+  },
+  "releaseFrame": 4,
+  "eggSpawn": {
+    "x": 0.06472491909385113,
+    "y": 0.501953125
+  }
+}

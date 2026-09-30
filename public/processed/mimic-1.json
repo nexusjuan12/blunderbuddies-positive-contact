@@ -1,0 +1,9 @@
+{
+  "frameWidth": 192,
+  "frameHeight": 192,
+  "frames": 8,
+  "fps": 10,
+  "originX": 0.49609375,
+  "originY": 0.71484375,
+  "hitRadius": 0.2578125
+}

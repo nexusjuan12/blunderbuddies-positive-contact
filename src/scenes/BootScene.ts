@@ -9,6 +9,8 @@ import { pillTexture, TITLE_FONT, UI_K } from '../systems/uiText';
 
 const P = 'processed/';
 const MASTER_VOLUME = 0.5;
+/** Enemy sheets that simply loop: texture key = JSON key = animation key. */
+const LOOP_SHEETS = ['mimic-1', 'mimic-2', 'mimic-3', 'elon-walk'];
 
 /** Loads processed art/audio, draws placeholder textures for things without art yet, then waits for a tap. */
 export class BootScene extends Phaser.Scene {
@@ -36,13 +38,7 @@ export class BootScene extends Phaser.Scene {
         for (const key of h.voices[kind]) this.load.audio(key, `${P}${key}.mp3`);
       }
     }
-    this.load.json('elon-walk', `${P}elon-walk.json`);
-    this.load.once('filecomplete-json-elon-walk', (_key: string, _type: string, meta: FlySheetMeta) => {
-      this.load.spritesheet('elon-walk', `${P}elon-walk.png`, { frameWidth: meta.frameWidth, frameHeight: meta.frameHeight });
-    });
-    this.load.image('mimic-1', `${P}mimic-1.png`);
-    this.load.image('mimic-2', `${P}mimic-2.png`);
-    this.load.image('mimic-3', `${P}mimic-3.png`);
+    for (const key of LOOP_SHEETS) this.loadSheet(key);
     this.load.image('sun', `${P}sun.png`);
     this.load.image('hh-sky', `${P}hh-sky.png`);
     this.load.image('hh-far', `${P}hh-far.png`);
@@ -64,6 +60,14 @@ export class BootScene extends Phaser.Scene {
     this.load.audio('voice-uhuhno-defeat', `${P}voice-uhuhno-defeat.mp3`);
   }
 
+  /** Queue a sprite sheet whose frame size lives in its JSON (`<key>.json` + `<key>.png`). */
+  private loadSheet(key: string): void {
+    this.load.json(key, `${P}${key}.json`);
+    this.load.once(`filecomplete-json-${key}`, (_key: string, _type: string, meta: FlySheetMeta) => {
+      this.load.spritesheet(key, `${P}${key}.png`, { frameWidth: meta.frameWidth, frameHeight: meta.frameHeight });
+    });
+  }
+
   create(): void {
     // Master volume starts at 50%; individual sounds keep their own relative levels.
     this.sound.volume = MASTER_VOLUME;
@@ -80,13 +84,15 @@ export class BootScene extends Phaser.Scene {
       });
     }
 
-    const elon = this.cache.json.get('elon-walk') as FlySheetMeta;
-    this.anims.create({
-      key: 'elon-walk',
-      frames: this.anims.generateFrameNumbers('elon-walk', { start: 0, end: elon.frames - 1 }),
-      frameRate: elon.fps,
-      repeat: -1,
-    });
+    for (const key of LOOP_SHEETS) {
+      const meta = this.cache.json.get(key) as FlySheetMeta;
+      this.anims.create({
+        key,
+        frames: this.anims.generateFrameNumbers(key, { start: 0, end: meta.frames - 1 }),
+        frameRate: meta.fps,
+        repeat: -1,
+      });
+    }
 
     this.showGate();
   }

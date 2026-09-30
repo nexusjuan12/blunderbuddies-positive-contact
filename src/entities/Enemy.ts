@@ -16,10 +16,15 @@ const TELEGRAPH_TINT = 0xff5a5a;
 const Look = { Normal: 0, Flash: 1, Telegraph: 2, Carrier: 3 } as const;
 type Look = (typeof Look)[keyof typeof Look];
 
-/** Walk-sheet metadata (tools/process_assets.py), all 0..1 of the frame. */
-interface WalkSheetMeta {
-  feetY: number;
-  hitbox: { x: number; y: number; w: number; h: number };
+/** Sheet metadata (tools/process_assets.py), all 0..1 of the frame. */
+interface SheetMeta {
+  /** Mimic heads: face centre and radius. */
+  originX?: number;
+  originY?: number;
+  hitRadius?: number;
+  /** Ground walkers: feet line and body box. */
+  feetY?: number;
+  hitbox?: { x: number; y: number; w: number; h: number };
 }
 
 /** A pooled enemy: mimic heads and Elons. Behaviour is chosen by its data definition. */
@@ -67,19 +72,21 @@ export class Enemy extends Phaser.GameObjects.Sprite implements Target {
     this.vx = 0;
     this.vy = 0;
     this.setTexture(def.texture, 0);
-    this.setScale(def.displayHeight / this.height);
-    if (def.behavior === 'ground') {
-      // Position is the hitbox centre; stand the feet on the ground line.
-      const meta = this.scene.cache.json.get(def.texture) as WalkSheetMeta;
-      const ox = meta.hitbox.x + meta.hitbox.w / 2;
+    // The sprite's position is always its hitbox centre.
+    const meta = this.scene.cache.json.get(def.texture) as SheetMeta;
+    if (meta.hitRadius !== undefined) {
+      // Mimic heads: scale so the face matches the collision radius; origin on the face.
+      this.setScale(def.radius / (meta.hitRadius * this.height));
+      this.setOrigin(meta.originX ?? 0.5, meta.originY ?? 0.5);
+    } else if (meta.hitbox && meta.feetY !== undefined && def.behavior === 'ground') {
+      this.setScale(def.displayHeight / this.height);
       const oy = meta.hitbox.y + meta.hitbox.h / 2;
-      this.setOrigin(ox, oy);
+      this.setOrigin(meta.hitbox.x + meta.hitbox.w / 2, oy);
+      // Stand the feet on the ground line.
       y = def.groundY - (meta.feetY - oy) * def.displayHeight;
-      this.play(def.anim);
-    } else {
-      this.anims.stop();
-      this.setOrigin(0.5);
     }
+    this.play(def.anim);
+    this.anims.setProgress(Math.random());
     this.setPosition(x, y);
     this.rotation = 0;
     this.applyLook(Look.Normal, true);

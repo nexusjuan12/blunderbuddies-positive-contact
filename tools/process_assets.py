@@ -69,8 +69,6 @@ def save(im: Image.Image, name: str) -> None:
 
 def sprites() -> None:
     print("sprites")
-    for i in (1, 2, 3):
-        save(fit(centre_on_mass(trim(load(f"mimic-{i}.png"))), 192), f"mimic-{i}.png")
     save(fit(trim(load("sun.png")), 320), "sun.png")
 
 
@@ -175,6 +173,76 @@ def spiderlons() -> None:
     shutil.copyfile(d / "spiderlon_boss_idle_sheet.png", OUT / "spiderlon-boss-idle.png")
     (OUT / "spiderlon-boss-idle.json").write_text(json.dumps(meta, indent=2) + "\n")
     print("  spiderlon-boss-idle.png + json")
+    shutil.rmtree(TMP)
+
+
+# Animated mimic heads: zip variant -> game key (mimic-1 charger, mimic-2 flyer, mimic-3 turret).
+MIMICS = {"horn": "mimic-1", "propeller": "mimic-2", "hood": "mimic-3"}
+
+
+def mimics(scale: float = 0.75) -> None:
+    """Animated mimic head sheets, with the face hitbox centre and radius as 0..1 of the frame."""
+    print("mimics")
+    TMP.mkdir(parents=True, exist_ok=True)
+    d = unzip("mimic heads animated.zip")
+    meta = json.loads((d / "mimic_heads.json").read_text())
+    fw0, fh0 = meta["frameWidth"], meta["frameHeight"]
+    for variant, key in MIMICS.items():
+        sheet, fw, fh = rescale_sheet(load(d / f"mimic_{variant}_sheet.png"), fw0, fh0, meta["frames"], meta["columns"], scale)
+        save(sheet, f"{key}.png")
+        v = meta["variants"][variant]
+        (OUT / f"{key}.json").write_text(json.dumps({
+            "frameWidth": fw, "frameHeight": fh, "frames": meta["frames"], "fps": meta["fps"],
+            "originX": v["hitbox_center"][0] / fw0, "originY": v["hitbox_center"][1] / fh0,
+            # Face radius as a fraction of the frame height.
+            "hitRadius": v["hitbox_radius"] / fh0,
+        }, indent=2) + "\n")
+    shutil.rmtree(TMP)
+
+
+def robo_bunny(scale: float = 0.5, egg_scale: float = 0.3) -> None:
+    """Robo Easter bunny walk/throw sheets, its egg projectiles, and the escape-pod rider stand-in."""
+    print("robo bunny")
+    TMP.mkdir(parents=True, exist_ok=True)
+    d = unzip("robo-bunny.zip")
+    meta = json.loads((d / "robo_bunny.json").read_text())
+    out = {}
+    for name in ("walk", "throw"):
+        m = meta[name]
+        sheet, fw, fh = rescale_sheet(load(d / m["file"]), m["frameWidth"], m["frameHeight"], m["frames"], m["columns"], scale)
+        save(sheet, f"bunny-{name}.png")
+        out[name] = {"frameWidth": fw, "frameHeight": fh, "frames": m["frames"], "fps": m["fps"]}
+    fw0, fh0 = meta["walk"]["frameWidth"], meta["walk"]["frameHeight"]
+    hb = meta["hitbox"]
+    sx, sy = meta["throw"]["egg_spawn_point"]
+    out.update({
+        # Everything below as 0..1 of a frame.
+        "feetY": meta["feet_baseline_y"] / fh0,
+        "hitbox": {"x": hb["x"] / fw0, "y": hb["y"] / fh0, "w": hb["w"] / fw0, "h": hb["h"] / fh0},
+        "releaseFrame": meta["throw"]["release_frame"],
+        "eggSpawn": {"x": sx / fw0, "y": sy / fh0},
+    })
+    (OUT / "bunny.json").write_text(json.dumps(out, indent=2) + "\n")
+
+    d = unzip("egg-projectiles.zip")
+    em = json.loads((d / "egg_projectiles.json").read_text())
+    sheet, fw, fh = rescale_sheet(load(d / "egg_projectiles_sheet.png"), em["frameWidth"], em["frameHeight"], em["frames"], em["columns"], egg_scale)
+    save(sheet, "eggs.png")
+    (OUT / "eggs.json").write_text(json.dumps({
+        "frameWidth": fw, "frameHeight": fh, "frames": em["frames"], "radius": round(em["hitbox_radius"] * egg_scale, 1),
+    }, indent=2) + "\n")
+    print("  bunny.json, eggs.json")
+
+    # Stand-in for the escape pod: Mr. Uh-Uh-No cut out of the turkey body art with a soft-edged mask.
+    d = unzip("files.zip")
+    body = load(d / "mecha_turkey_body.png")
+    poly = [(470, 108), (522, 108), (548, 176), (566, 226), (604, 300), (612, 392), (430, 396), (398, 300), (414, 212), (418, 182)]
+    mask = Image.new("L", body.size, 0)
+    ImageDraw.Draw(mask).polygon(poly, fill=255)
+    mask = mask.filter(ImageFilter.GaussianBlur(5))
+    rider = body.copy()
+    rider.putalpha(Image.composite(body.getchannel("A"), Image.new("L", body.size, 0), mask))
+    save(fit(trim(rider), 150), "uhuhno-rider.png")
     shutil.rmtree(TMP)
 
 
@@ -333,6 +401,8 @@ STEPS = {
     "sprites": sprites,
     "buddies": buddies,
     "spiderlons": spiderlons,
+    "mimics": mimics,
+    "robo_bunny": robo_bunny,
     "title": title,
     "backgrounds": backgrounds,
     "mecha_turkey": mecha_turkey,

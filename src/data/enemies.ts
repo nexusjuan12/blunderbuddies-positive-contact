@@ -3,8 +3,14 @@
  * Units: px, px/s, seconds.
  */
 interface EnemyBase {
+  /** Sprite sheet key; its JSON (same key) holds frame size, fps and hitbox. */
   texture: string;
-  /** On-screen height of the head in px. */
+  /** Looping animation key (created in BootScene). */
+  anim: string;
+  /**
+   * Rough on-screen height in px. Mimic heads are sized from `radius` instead (their sheet records
+   * the face radius), so for them this is only used as the off-screen despawn margin.
+   */
   displayHeight: number;
   hp: number;
   /** Collision circle radius in px (hurts the hero on contact, takes hits from shots). */
@@ -47,8 +53,6 @@ export interface TurretEnemyDef extends EnemyBase {
 /** Spiderlon's minions: walk along the ground, stop, and lob a shot that lands on the hero. */
 export interface GroundEnemyDef extends EnemyBase {
   behavior: 'ground';
-  /** Walk animation key (created in BootScene from the sheet of the same name as `texture`). */
-  anim: string;
   /** Feet line, px from the top of the screen. */
   groundY: number;
   /** The ground itself scrolls left at this speed (Happy Hills near layer). */
@@ -70,9 +74,10 @@ export const ENEMIES = {
   flyer: {
     behavior: 'sine',
     texture: 'mimic-2',
+    anim: 'mimic-2',
     displayHeight: 84,
     hp: 6,
-    radius: 22,
+    radius: 25,
     score: 100,
     speed: 170,
     amplitude: 60,
@@ -81,9 +86,10 @@ export const ENEMIES = {
   charger: {
     behavior: 'charger',
     texture: 'mimic-1',
+    anim: 'mimic-1',
     displayHeight: 96,
     hp: 12,
-    radius: 24,
+    radius: 27,
     score: 150,
     enterSpeed: 260,
     stopDistance: 190,
@@ -93,9 +99,10 @@ export const ENEMIES = {
   turret: {
     behavior: 'turret',
     texture: 'mimic-3',
+    anim: 'mimic-3',
     displayHeight: 100,
     hp: 30,
-    radius: 36,
+    radius: 38,
     score: 300,
     driftSpeed: 55,
     bobAmplitude: 14,
