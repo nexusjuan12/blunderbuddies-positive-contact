@@ -21,7 +21,7 @@ Check the installed Phaser version in `package.json` before using an API, and do
 - `npx cap sync android` – copy the web build into the Android project (`npm run cap:sync` builds first)
 - APK build: via Android Studio or `./gradlew assembleDebug` in `android/` (needs JDK 21 + Android SDK; `android/` not added yet)
 
-Debug URL flags: `?fps` (FPS counter), `?boss` (skip to boss), `?hitboxes` (draw collision circles), `?god` (no damage), `?hero=<nuhuh|uhhuh|oopsie|whoopsie|teehee>` (skip the title), `?team=N` (start with N companions), `?debug` (exposes `window.game` for automated tests).
+Debug URL flags: `?fps` (FPS counter), `?bunny` (skip to the mid-level robo bunny), `?boss` (skip to boss), `?ascent` (skip to the turkey's defeat and the ascent), `?hitboxes` (draw collision circles), `?god` (no damage), `?hero=<nuhuh|uhhuh|oopsie|whoopsie|teehee>` (skip the title), `?team=N` (start with N companions), `?debug` (exposes `window.game` for automated tests).
 
 ## Universe rules (important)
 
@@ -32,7 +32,7 @@ Debug URL flags: `?fps` (FPS counter), `?boss` (skip to boss), `?hitboxes` (draw
 - Hero motifs: hearts, stars, rainbows, flowers, positive-vibes beams.
 - **Avoid** literal toddler props: no sippy cups, pacifiers, bottles, diapers.
 - Villains:
-  - **Mr. Uh-Uh-No:** tantruming toddler energy; boss rides a giant mecha-turkey.
+  - **Mr. Uh-Uh-No:** tantruming toddler energy; his machines are holiday-themed (mecha-turkey, robo Easter bunny, rocket sled).
   - **Agent Ice:** bureaucratic monotone; boss drives a bulldozer tank with a freeze ray.
   - **Spiderlon:** childlike anti-villain; final boss appears as giant Spiderlons. He gets befriended, not destroyed.
 - Tone: absurd and over the top, but the game should play like a real, well-tuned shmup.

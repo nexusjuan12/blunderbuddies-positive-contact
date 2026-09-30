@@ -11,9 +11,9 @@ game-ready versions to `public/processed/` (needs Pillow + ffmpeg). Re-run it wh
 | Per-Buddy select / damage / recover clips | `voice-<id>-{select,damage,recover}.mp3` | Select screen, hit reaction, respawn, companion arrival |
 | `elon-ground-minion.zip` | `elon-walk.png/.json` | Elon ground enemy |
 | `spiderlon-boss.zip` | `spiderlon-boss-idle.png/.json` | Final boss (not used yet) |
-| `mimic-1.png` (orange horn) | `mimic-1.png` | Charger enemy |
-| `mimic-2.png` (propeller) | `mimic-2.png` | Sine-wave flyer |
-| `mimic-3.png` (purple hood) | `mimic-3.png` | Turret (aimed shots) |
+| `mimic heads animated.zip` | `mimic-1/2/3.png` + `.json` (horn = charger, propeller = flyer, hood = turret) | Animated mimic heads |
+| `robo-bunny.zip`, `egg-projectiles.zip` | `bunny-walk.png`, `bunny-throw.png`, `bunny.json`, `eggs.png/.json` | Robo Easter bunny and its eggs |
+| `files.zip` turkey body (cropped) | `uhuhno-rider.png` | Stand-in for Mr. Uh-Uh-No on the escape pod |
 | `happy_hills_sky/far/near.png` | `hh-sky/far/near.png` (540px tall) | Parallax layers |
 | `happy_hills_dome_landmark.png` | `hh-dome.png` | Buddies' home dome, scrolls past at level start |
 | `sun.png` | `sun.png` (320px) | Bouncing sun |
@@ -38,6 +38,11 @@ Not used yet: `nuh-uh-standing-transparent.png` (not planned for use), `nuh-uh-f
 - Hit sparks, explosion rings, hitbox glow dot, shield pips
 
 ## Wanted
+
+- **Escape pod:** Mr. Uh-Uh-No clinging to the turkey's head (the current rider is cut out of the turkey body art).
+- **Clouds and sky:** cloud sprites, a cloud-sea strip and a high-altitude sky for the ascent and Stage 2 (currently drawn in code).
+- **Sky-level art on hand, not yet used:** `rocketsled-uh-uh-no.zip`, `agent-ice-zeppelin.zip`, `gift-projectiles.zip`. Still needed: winged mimics, Elons on rockets.
+- **Enemy bullet art:** bolts, shards, feathers, orbs and splitters are drawn in code.
 
 - **SFX** (designed, not voice): star shot, heart shot, ball boing, petal bloom, beam hum, enemy pop, boss hit, drumstick burst, gobble, explosion, shield break, pickup, Positive Vibes Wave.
 - **More Nuh-Uh voice clips**: with one clip per situation the no-immediate-repeat rule can't do anything.

@@ -29,6 +29,10 @@ Runs in the browser on desktop and phones (hold your phone in landscape).
 | Whoopsie-Doodle | Petals that orbit, absorb bullets, then bloom outward |
 | Tee-Hee | Piercing rainbow beam |
 
+Stage 1 is Happy Hills: mimic heads in the air, Elons on the ground, a robo Easter bunny lobbing eggs at
+mid-level, and Mr. Uh-Uh-No's mecha-turkey at the end. Beat it and he flees skyward on the turkey's head,
+with your Buddy climbing after him through the clouds.
+
 Glowing carrier enemies drop a team pickup that adds a random Buddy as a companion. Get all five
 together for **TEAM FORMED** and a free Positive Vibes Wave. The vibes meter fills as you take out
 enemies and hit the boss (and slowly on its own); each full meter is another Wave, up to three.
@@ -53,7 +57,8 @@ npm run dev
 Open the `Local:` address it prints. The `Network:` address works on a phone on the same Wi-Fi.
 
 **Debug flags** (add to the URL, combine with `&`): `?hero=<nuhuh|uhhuh|oopsie|whoopsie|teehee>` start as
-that Buddy, `?team=N` start with N companions, `?boss` skip to the boss, `?god` no damage,
+that Buddy, `?team=N` start with N companions, `?bunny` skip to the robo bunny, `?boss` skip to the boss,
+`?ascent` skip to the boss's defeat and the climb, `?god` no damage,
 `?fps` frame counter, `?hitboxes` show collision circles.
 
 ## Build

@@ -12,6 +12,10 @@ Grouped by milestone, in `GAME_DESIGN.md` order. Tick items off as they land.
 - [x] Touch (relative drag), keyboard and gamepad controls
 - [x] Title screen (Jake's animation, Perfect Dark font, title music)
 - [x] **Elons** (Spiderlon's minions): ground walker + lobber in Happy Hills
+- [x] Animated mimic heads
+- [x] Robo Easter bunny: mid-level tank with Hammer Bros-style spinning eggs
+- [x] Varied enemy projectiles (wavy bolts, shards, feather darts, big orbs, splitters)
+- [x] Turkey defeat: head escape pod, ascent through the clouds, STAGE 1 CLEAR
 - [ ] Android APK: install Android Studio, `npx cap add android`, lock landscape, `./gradlew assembleDebug`, test on a phone at 60 fps
 - [ ] On-device touch tuning (drag sensitivity, hero size)
 - [ ] Pack sprites into texture atlases
@@ -23,6 +27,7 @@ Grouped by milestone, in `GAME_DESIGN.md` order. Tick items off as they land.
 
 - [x] Flight sheets, super poses, select idles and voices for all five Buddies
 - [x] Shots: hearts spread, homing stars, bouncing balls, orbiting flowers, rainbow beam (placeholder projectile art)
+- [x] Homing stars toned down (lock cone and range, slower turn and fire) and restyled (colours, glow, size wave, trails)
 - [x] Positive Vibes Wave: on-screen button, X/Space, gamepad face buttons; super pose swap
 - [x] Vibes meter: fills from kills, boss damage and a slow trickle; +1 Wave per fill (max 3)
 - [x] Buddy select (title screen) and results screen with Play again / Choose Buddy
@@ -34,12 +39,15 @@ Grouped by milestone, in `GAME_DESIGN.md` order. Tick items off as they land.
 - [ ] Vibe level power-up (what each level changes per hero) and super-stock pickups
 - [ ] Pickup art (team orb is a placeholder)
 
-## Milestone 4: remaining levels and bosses
+## Milestone 4: remaining stages
 
-- [ ] Level 1: Blunderbuddies Dome + mini-boss (TBD)
-- [ ] Level 3: Snow Day + Agent Ice bulldozer tank
-- [ ] Level 4: Villain Dome + boss (TBD)
-- [ ] Level 5: Space + giant Spiderlons (befriended ending). Spiderlon boss idle sheet is already processed (`spiderlon-boss-idle`).
+- [ ] Stage 2, Sky: plugs in where the ascent now ends (currently it goes to the results screen)
+  - [ ] Sun at mid-height; clouds pass in front of him and bounce off him
+  - [ ] Winged mimics, Elons riding rockets
+  - [ ] Mid-level boss, end boss, mega boss. Art on hand, not yet processed: `rocketsled-uh-uh-no.zip`, `agent-ice-zeppelin.zip`, `gift-projectiles.zip`
+- [ ] Descent transition back through the clouds
+- [ ] Stage 3, Villain lair
+- [ ] Decide where the earlier ideas fit: Dome, Snow Day, Space and the giant Spiderlons (`spiderlon-boss-idle` is processed)
 
 ## Milestone 5: polish
 

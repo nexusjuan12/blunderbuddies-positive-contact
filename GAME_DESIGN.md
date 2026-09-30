@@ -24,7 +24,7 @@ The player picks one of five Buddies on the Buddy select screen. Heroes fly thro
 | Buddy | Main shot | Feel |
 |---|---|---|
 | Uh-Huh | Hearts: wide spread | Crowd clearing, weaker per hit |
-| Nuh-Uh | Stars: homing | Forgiving, good for newer players |
+| Nuh-Uh | Stars: colourful, glowing, with after-trails; they curve toward enemies ahead of them (not across the whole screen) | Forgiving, good for newer players |
 | Oopsie | Rubber balls in his costume colours, fired alternately up and down, bouncing 2–3 times off the top and bottom of the screen with a squash on each bounce | The tricky shot: hits things you're not lined up with |
 | Whoopsie-Doodle | Flowers: petals orbit the hero and absorb bullets, then bloom outward as a shockwave | Defensive, rhythmic |
 | Tee-Hee | Rainbow beam: continuous piercing laser | High damage, narrow, rewards aim |
@@ -75,20 +75,36 @@ After a stage clear or game over, the results screen offers "Play again" (same B
 
 ## Levels
 
-| # | Level | Boss | Music |
-|---|---|---|---|
-| 1 | Blunderbuddies Dome | Mini-boss TBD | Clint Eastwood (funky bass instrumental cover) |
-| 2 | Happy Hills | Mr. Uh-Uh-No in a giant mecha-turkey | Axel F cover |
-| 3 | Snow Day (outdoor ice level) | Agent Ice in a bulldozer tank | TBD |
-| 4 | Villain Dome | TBD: boss rush or Spiderlon's first appearance | Sabotage cover |
-| 5 | Space | Giant Spiderlons (final) | Positive Contact rewrite |
+The game runs as one continuous chase, with transitions instead of hard cuts between stages.
+
+| Stage | Setting | Enemies | Bosses | Music |
+|---|---|---|---|---|
+| 1 | Happy Hills | Mimic heads (flyer, charger, turret), Elons on the ground | Mid-level: robo Easter bunny (tank). End: Mr. Uh-Uh-No's mecha-turkey | Axel F cover |
+| → | **Ascent** | – | The weakened villain flees skyward on the turkey's detached head; the hero climbs after him through the clouds | – |
+| 2 | Sky, above the clouds | Winged mimics, Elons riding rockets | Mid-level boss, end boss, then a mega boss (art on hand: Mr. Uh-Uh-No's rocket sled with gift projectiles, Agent Ice's zeppelin) | TBD |
+| → | **Descent** | – | Back down through the clouds | – |
+| 3 | Villain lair | TBD | TBD | TBD |
+
+**The sun.** In Happy Hills he bounces along at the top of the sky. During the ascent he comes down to about mid-screen, and at cloud level the occasional cloud passes in front of him or bounces off him.
+
+**The villain's machines are holiday-themed:** Thanksgiving turkey, Easter bunny, Christmas rocket sled and gifts.
+
+Earlier ideas not yet placed in this structure: Blunderbuddies Dome, Snow Day with Agent Ice's bulldozer tank, Space with the giant Spiderlons (befriended ending), and the Clint Eastwood / Sabotage / Positive Contact tracks.
 
 ### Bosses
 
+**Robo Easter bunny (Happy Hills, mid-level).** A tank, not a wave-stopping boss.
+- Walks in along the ground around mid-level and stays on screen until destroyed, advancing and receding while the regular waves keep coming.
+- Lobs spinning Easter eggs on overlapping arcs, Hammer Bros style: chaotic rather than aimed.
+- Always drops a team pickup when destroyed. The mecha-turkey doesn't arrive until it's gone.
+
 **Mr. Uh-Uh-No, mecha-turkey (Happy Hills).** A nod to Thankful Buddy Day.
-- Phase 1: drumstick missiles that arc and burst.
-- Phase 2: gobble shockwaves, expanding rings with gaps to slip through.
-- Phase 3, tantrum: Mr. Uh-Uh-No pounds the controls, the mech stomps erratically and sprays random bullets. Chaotic but readable.
+- Phase 1: drumstick missiles that arc and burst into feather darts that speed up.
+- Phase 2: gobble shockwaves, expanding rings with gaps to slip through, alternating small and big slow orbs.
+- Phase 3, tantrum: Mr. Uh-Uh-No pounds the controls, the mech stomps erratically and sprays a mix of bullets. Chaotic but readable.
+- Defeat: the body blows apart, the head detaches with Mr. Uh-Uh-No clinging to it and rockets skyward like an escape pod. The hero pursues (the ascent).
+
+**Enemy projectiles** differ by enemy in both look and movement: wavy bolts (hood mimic), a fan of fast shards (horn mimic, as it charges), web balls (Elons), spinning eggs (bunny), feather darts that accelerate, big slow orbs, and splitters that burst into shards.
 
 **Agent Ice, bulldozer tank (Snow Day).** Bureaucratic monotone.
 - Freeze ray: a telegraphed beam. If it hits, the hero is locked in an ice block and the player rapid-taps / mashes to break out.
