@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GAME_HEIGHT as H, GAME_WIDTH as W } from '../config';
+import { asset, GAME_HEIGHT as H, GAME_WIDTH as W } from '../config';
 import { HEROES, type HeroId } from '../data/heroes';
 import type { CutsceneData } from './CutsceneScene';
 import { TITLE } from '../data/title';
@@ -449,7 +449,7 @@ export class TitleScene extends Phaser.Scene {
     if (this.textures.exists(hero.selectTexture)) return ready();
     const meta = this.cache.json.get(hero.selectTexture) as SelectSheetMeta;
     this.load.once(`filecomplete-spritesheet-${hero.selectTexture}`, ready);
-    this.load.spritesheet(hero.selectTexture, `processed/${hero.selectTexture}.png`, {
+    this.load.spritesheet(hero.selectTexture, asset(`${hero.selectTexture}.png`), {
       frameWidth: meta.frameWidth,
       frameHeight: meta.frameHeight,
     });

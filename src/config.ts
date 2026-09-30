@@ -2,6 +2,14 @@
 export const GAME_WIDTH = 960;
 export const GAME_HEIGHT = 540;
 
+/**
+ * URL of a processed asset, stamped with the build id. Asset file names are not hashed, so without
+ * this a CDN or browser can keep serving an old file under the same name after a new deploy.
+ */
+export function asset(file: string): string {
+  return `processed/${file}?v=${__BUILD_ID__}`;
+}
+
 /** Render depth layers, lowest first. */
 export const Depth = {
   Background: 0,

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { Debug, GAME_HEIGHT, GAME_WIDTH } from '../config';
+import { asset, Debug, GAME_HEIGHT, GAME_WIDTH } from '../config';
 import { HERO_IDS, HEROES, isHeroId } from '../data/heroes';
 import { TITLE } from '../data/title';
 import type { FlySheetMeta } from '../entities/Hero';
@@ -8,7 +8,6 @@ import { canvasTexture } from '../systems/canvasTexture';
 import { flower, heart, RAINBOW, rainbow, star } from '../systems/shapes';
 import { pillTexture, TITLE_FONT, UI_K } from '../systems/uiText';
 
-const P = 'processed/';
 const MASTER_VOLUME = 0.5;
 /** Enemy sheets that simply loop: texture key = JSON key = animation key. */
 const LOOP_SHEETS = ['mimic-1', 'mimic-2', 'mimic-3', 'elon-walk'];
@@ -28,54 +27,54 @@ export class BootScene extends Phaser.Scene {
     // Each flight sheet's frame size lives in its JSON, so queue the sheet once that has loaded.
     for (const id of HERO_IDS) {
       const h = HEROES[id];
-      this.load.json(h.texture, `${P}${h.texture}.json`);
+      this.load.json(h.texture, asset(`${h.texture}.json`));
       this.load.once(`filecomplete-json-${h.texture}`, (_key: string, _type: string, meta: FlySheetMeta) => {
-        this.load.spritesheet(h.texture, `${P}${h.texture}.png`, { frameWidth: meta.frameWidth, frameHeight: meta.frameHeight });
+        this.load.spritesheet(h.texture, asset(`${h.texture}.png`), { frameWidth: meta.frameWidth, frameHeight: meta.frameHeight });
       });
-      this.load.image(h.superTexture, `${P}${h.superTexture}.png`);
+      this.load.image(h.superTexture, asset(`${h.superTexture}.png`));
       // Select-idle sheets are big; only their metadata loads now (TitleScene loads the sheet on demand).
-      this.load.json(h.selectTexture, `${P}${h.selectTexture}.json`);
+      this.load.json(h.selectTexture, asset(`${h.selectTexture}.json`));
       for (const kind of ['select', 'damage', 'recover'] as const) {
-        for (const key of h.voices[kind]) this.load.audio(key, `${P}${key}.mp3`);
+        for (const key of h.voices[kind]) this.load.audio(key, asset(`${key}.mp3`));
       }
     }
     for (const key of LOOP_SHEETS) this.loadSheet(key);
 
     // Robo bunny (two sheets share one JSON), its eggs, and the escape-pod rider stand-in.
-    this.load.json('bunny', `${P}bunny.json`);
+    this.load.json('bunny', asset(`bunny.json`));
     this.load.once('filecomplete-json-bunny', (_key: string, _type: string, meta: BunnyMeta) => {
       for (const name of ['walk', 'throw'] as const) {
-        this.load.spritesheet(`bunny-${name}`, `${P}bunny-${name}.png`, { frameWidth: meta[name].frameWidth, frameHeight: meta[name].frameHeight });
+        this.load.spritesheet(`bunny-${name}`, asset(`bunny-${name}.png`), { frameWidth: meta[name].frameWidth, frameHeight: meta[name].frameHeight });
       }
     });
     this.loadSheet('eggs');
-    this.load.image('uhuhno-rider', `${P}uhuhno-rider.png`);
-    this.load.image('sun', `${P}sun.png`);
-    this.load.image('hh-sky', `${P}hh-sky.png`);
-    this.load.image('hh-far', `${P}hh-far.png`);
-    this.load.image('hh-near', `${P}hh-near.png`);
-    this.load.image('hh-dome', `${P}hh-dome.png`);
+    this.load.image('uhuhno-rider', asset(`uhuhno-rider.png`));
+    this.load.image('sun', asset(`sun.png`));
+    this.load.image('hh-sky', asset(`hh-sky.png`));
+    this.load.image('hh-far', asset(`hh-far.png`));
+    this.load.image('hh-near', asset(`hh-near.png`));
+    this.load.image('hh-dome', asset(`hh-dome.png`));
     for (const part of ['body', 'head', 'leg-front', 'leg-back']) {
-      this.load.image(`turkey-${part}`, `${P}turkey-${part}.png`);
+      this.load.image(`turkey-${part}`, asset(`turkey-${part}.png`));
     }
-    this.load.json('turkey-rig', `${P}turkey-rig.json`);
+    this.load.json('turkey-rig', asset(`turkey-rig.json`));
 
-    this.load.font(TITLE_FONT, `${P}pdark.ttf`);
-    this.load.json('title-panels', `${P}title-panels.json`);
-    this.load.image('title-bg', `${P}title-bg.png`);
-    for (const panel of ['tl', 'tr', 'bl', 'br', 'c']) this.load.image(`title-${panel}`, `${P}title-${panel}.png`);
-    this.load.audio('music-title', [`${P}music-title.ogg`, `${P}music-title.mp3`]);
+    this.load.font(TITLE_FONT, asset(`pdark.ttf`));
+    this.load.json('title-panels', asset(`title-panels.json`));
+    this.load.image('title-bg', asset(`title-bg.png`));
+    for (const panel of ['tl', 'tr', 'bl', 'br', 'c']) this.load.image(`title-${panel}`, asset(`title-${panel}.png`));
+    this.load.audio('music-title', [asset(`music-title.ogg`), asset(`music-title.mp3`)]);
 
-    this.load.audio('music-happy-hills', [`${P}music-happy-hills.ogg`, `${P}music-happy-hills.mp3`]);
-    this.load.audio('voice-uhuhno-taunt', `${P}voice-uhuhno-taunt.mp3`);
-    this.load.audio('voice-uhuhno-defeat', `${P}voice-uhuhno-defeat.mp3`);
+    this.load.audio('music-happy-hills', [asset(`music-happy-hills.ogg`), asset(`music-happy-hills.mp3`)]);
+    this.load.audio('voice-uhuhno-taunt', asset(`voice-uhuhno-taunt.mp3`));
+    this.load.audio('voice-uhuhno-defeat', asset(`voice-uhuhno-defeat.mp3`));
   }
 
   /** Queue a sprite sheet whose frame size lives in its JSON (`<key>.json` + `<key>.png`). */
   private loadSheet(key: string): void {
-    this.load.json(key, `${P}${key}.json`);
+    this.load.json(key, asset(`${key}.json`));
     this.load.once(`filecomplete-json-${key}`, (_key: string, _type: string, meta: FlySheetMeta) => {
-      this.load.spritesheet(key, `${P}${key}.png`, { frameWidth: meta.frameWidth, frameHeight: meta.frameHeight });
+      this.load.spritesheet(key, asset(`${key}.png`), { frameWidth: meta.frameWidth, frameHeight: meta.frameHeight });
     });
   }
 

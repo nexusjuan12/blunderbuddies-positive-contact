@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GAME_HEIGHT as H, GAME_WIDTH as W } from '../config';
+import { asset, GAME_HEIGHT as H, GAME_WIDTH as W } from '../config';
 import { CUTSCENES, type CutsceneId } from '../data/cutscenes';
 import { pillTexture, UI_K } from '../systems/uiText';
 
@@ -44,7 +44,7 @@ export class CutsceneScene extends Phaser.Scene {
     video.on(Phaser.GameObjects.Events.VIDEO_COMPLETE, () => this.finish());
     video.on(Phaser.GameObjects.Events.VIDEO_ERROR, () => this.finish());
     video.on(Phaser.GameObjects.Events.VIDEO_UNSUPPORTED, () => this.finish());
-    video.loadURL(CUTSCENES[data.key].url);
+    video.loadURL(asset(CUTSCENES[data.key].file));
     // Follow the game's master volume (the video has its own audio track).
     video.setVolume(this.sound.volume);
     video.play();
